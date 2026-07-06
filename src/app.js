@@ -9,6 +9,8 @@ const authRouter = require("./routes/auth.route.js")
 const staffRouter = require("./routes/staff.route.js")
 const { noRouteFound, globalErrorHandler } = require('./middleware/error.middleware.js')
 
+const { protect } = require("./middleware/auth.middleware.js");
+
 // ✔ Query parser extended
 app.set('query parser', 'extended');
 

@@ -53,6 +53,9 @@ const Staff = sequelize.define('Staff', {
 }, {
     tableName: 'staff',
     timestamps: false,
+    defaultScope: {
+        attributes: { exclude: ['Password'] },
+    },
     hooks: {
         beforeValidate: async (staff) => {
             if (staff.StaffName) staff.StaffName = staff.StaffName.trim();
