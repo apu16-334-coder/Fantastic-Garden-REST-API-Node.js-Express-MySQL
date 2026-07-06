@@ -26,7 +26,7 @@ const Customer = sequelize.define('Customer', {
             notNull: { msg: 'CustomerAddress is required' },
             notEmpty: { msg: 'CustomerAddress can not be empty' },
             len: {
-                args: [0-50],
+                args: [0 - 50],
                 msg: 'CustomerAddress cannot exceed 50 characters'
             }
         }
@@ -44,7 +44,7 @@ const Customer = sequelize.define('Customer', {
             notNull: { msg: 'CustomerEmail is required' },
             notEmpty: { msg: 'CustomerEmail can not be empty' },
             len: {
-                args: [0-50],
+                args: [0 - 50],
                 msg: 'CustomerEmail cannot exceed 50 characters'
             }
         }
@@ -73,6 +73,9 @@ const Customer = sequelize.define('Customer', {
 }, {
     tableName: 'customer',
     timestamps: false,
+    defaultScope: {
+        attributes: { exclude: ['Password'] },
+    },
     hooks: {
         beforeValidate: async (customer) => {
             if (customer.CustomerName) customer.CustomerName = customer.CustomerName.trim();
@@ -86,7 +89,7 @@ const Customer = sequelize.define('Customer', {
                 customer.Password = await bcrypt.hash(customer.Password, 12);
             }
         }
-    }
+    },   
 })
 
 module.exports = Customer;

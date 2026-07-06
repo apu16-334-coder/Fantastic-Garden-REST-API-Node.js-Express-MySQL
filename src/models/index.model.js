@@ -12,8 +12,8 @@ Customer.hasMany(Order, { foreignKey: 'CustomerId' });
 Order.belongsTo(Customer, { foreignKey: 'CustomerId' });
 
 // Order <-> Product (many-to-many through OrderProduct)
-Order.belongsToMany(Product, { through: OrderProduct, foreignKey: OrderId});
-Product.belongsToMany(Order, { through: OrderProduct, foreignKey: OrderId});
+Order.belongsToMany(Product, { through: OrderProduct, foreignKey: 'OrderId' });
+Product.belongsToMany(Order, { through: OrderProduct, foreignKey: 'ProductId' });
 
 // Order <-> Service (many-to-many through OrderService)
 Order.belongsToMany(Service, { through: OrderService, foreignKey: 'OrderId' });

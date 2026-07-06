@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const { Customer } = require('../models/index.model');
 const catchAsync = require("../utlis/catchAsync.js");
+const generateToken = require("../utlis/generateToken.js")
 
 const filterBody = require("../utlis/filterBody.js");
 const AppError = require("../utlis/AppError.js");
@@ -34,4 +35,52 @@ const signUp = catchAsync(
     }
 )
 
-module.exports = { signUp }
+/**
+ * loginCustomer
+ * public signup customer only
+ * POST /api/v1/auth/login/customer'
+ */
+const loginCustomer = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        if (!req.body) return res.status(400).json({ success: false, message: "invalid request body" });
+
+        // get requested email and password
+        const { CustomerEmail, Password } = req.body;
+
+        if (!CustomerEmail) return next(new AppError(400, 'CustomerEmail is required'));
+
+        if (!Password) return next(new AppError(400, 'Password is required'));
+
+        const customer = await Customer.unscoped().findOne({ where: { CustomerEmail } });
+
+        // Constant-time response (always compare password even if user doesn't exist)
+        const hashToCompare = (customer)
+            ? customer.Password
+            : "$2b$12$gCPPVO/Abj4wrRg/qGdX0eF1.eizqSvFQpiUQ9MsMqc/CkC1KajxK";
+
+        const isPasswordMatch = await bcrypt.compare(Password, hashToCompare);
+
+        // if user is not found or password does not match
+        if (!customer || !isPasswordMatch) {
+            return next(new AppError(401, "Invalid CustomerEmail or password"));
+        }
+
+        const token = generateToken({ id: customer.CustomerEmail, role: 'customer' });
+
+        //response
+        res.status(201).json({
+            success: true,
+            token,
+            data: {
+                CustomerId: customer.CustomerId,
+                CustomerName: customer.CustomerName,
+                CustomerAddress: customer.CustomerAddress,
+                CustomerEmail: customer.CustomerEmail,
+                PhoneNumber: customer.PhoneNumber,
+            }
+        })
+    }
+)
+
+module.exports = { signUp, loginCustomer }
