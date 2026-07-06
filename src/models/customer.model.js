@@ -26,7 +26,7 @@ const Customer = sequelize.define('Customer', {
             notNull: { msg: 'CustomerAddress is required' },
             notEmpty: { msg: 'CustomerAddress can not be empty' },
             len: {
-                args: [0 - 50],
+                args: [0, 50],
                 msg: 'CustomerAddress cannot exceed 50 characters'
             }
         }
@@ -44,7 +44,7 @@ const Customer = sequelize.define('Customer', {
             notNull: { msg: 'CustomerEmail is required' },
             notEmpty: { msg: 'CustomerEmail can not be empty' },
             len: {
-                args: [0 - 50],
+                args: [0, 50],
                 msg: 'CustomerEmail cannot exceed 50 characters'
             }
         }

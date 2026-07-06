@@ -6,6 +6,7 @@ const rateLimit = require("express-rate-limit");
 
 const app = express()
 const authRouter = require("./routes/auth.route.js")
+const staffRouter = require("./routes/staff.route.js")
 const { noRouteFound, globalErrorHandler } = require('./middleware/error.middleware.js')
 
 // ✔ Query parser extended
@@ -37,6 +38,7 @@ app.get("/", (req, res) => {
 /* ---------- ROUTES ---------- */
 
 app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/staffs', staffRouter);
 
 /* ---------- ERROR HANDLERS ---------- */
 
