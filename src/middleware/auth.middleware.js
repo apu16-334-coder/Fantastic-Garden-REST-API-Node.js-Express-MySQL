@@ -48,8 +48,6 @@ const protect = catchAsync(
             return next(new AppError(401, "User is no longer exists"));
         }
 
-        console.log(currentUser.IsActive !== undefined)
-
         if(currentUser.IsActive !== undefined) {
             if(!currentUser.isActive) return next(new AppError(401, "User is no longer exists"));
         }
