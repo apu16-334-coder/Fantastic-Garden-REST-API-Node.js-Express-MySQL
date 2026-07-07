@@ -69,7 +69,11 @@ const Customer = sequelize.define('Customer', {
                 msg: 'Phone number must be in international format: +[country code][number] (e.g., +8801712345678)'
             }
         }
-    }
+    },
+    PasswordChangeAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
 }, {
     tableName: 'customer',
     timestamps: false,
@@ -87,6 +91,11 @@ const Customer = sequelize.define('Customer', {
             // Hash password if present
             if (customer.Password) {
                 customer.Password = await bcrypt.hash(customer.Password, 12);
+            }
+        },
+        beforeUpdate: (customer) => {
+            if(customer.changed('Password')) {
+                customer.PasswordChangeAt = Date.now() -1000;
             }
         }
     },   

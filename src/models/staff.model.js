@@ -49,6 +49,16 @@ const Staff = sequelize.define('Staff', {
     Role: {
         type: DataTypes.ENUM('admin', 'staff'),
         defaultValue: 'staff',
+        allowNull: false,
+    },
+    PasswordChangeAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
+    IsActive: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+        allowNull: false,
     }
 }, {
     tableName: 'staff',
@@ -65,6 +75,11 @@ const Staff = sequelize.define('Staff', {
             // Hash password if present
             if (staff.Password) {
                 staff.Password = await bcrypt.hash(staff.Password, 12);
+            }
+        },
+        beforeUpdate: (staff) => {
+            if(staff.changed('Password')) {
+                staff.PasswordChangeAt = Date.now() - 1000;
             }
         }
     },

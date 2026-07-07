@@ -20,7 +20,7 @@ const createStaff = catchAsync(
     async (req, res, next) => {
         if (!req.body) return res.status(400).json({ success: false, message: "invalid request body" });
 
-        const filtered = filterBody(req.body, 'StaffName', 'StaffEmail', 'Password', 'Role');
+        const filtered = filterBody(req.body, 'StaffName', 'StaffEmail', 'Password', 'Role', 'IsActive');
 
         if (filtered.Password?.length < 8) return next(new AppError(400, 'Password must be atleast 8 characters'));
 

@@ -40,7 +40,7 @@ app.get("/", (req, res) => {
 /* ---------- ROUTES ---------- */
 
 app.use('/api/v1/auth', authRouter);
-app.use('/api/v1/staffs', staffRouter);
+app.use('/api/v1/staffs', protect, staffRouter);
 
 /* ---------- ERROR HANDLERS ---------- */
 

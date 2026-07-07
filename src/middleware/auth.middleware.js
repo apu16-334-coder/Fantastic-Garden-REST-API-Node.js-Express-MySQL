@@ -36,16 +36,34 @@ const protect = catchAsync(
             return next(new AppError(401, "Invalid or expired token"));
         }
 
-        console.log(decoded.role);
+  
 
-        const user = decoded.role === 'customer'
+        const currentUser = decoded.role === 'customer'
             ? await Customer.findOne({ where: { CustomerEmail: decoded.email} })
             : await Staff.findOne({ where: { StaffEmail: decoded.email } });
 
-        console.log(user)
+        // console.log(currentUser)
         // Check if user still exists
-        if (!user) {
+        if (!currentUser) {
             return next(new AppError(401, "User is no longer exists"));
+        }
+
+        console.log(currentUser.IsActive !== undefined)
+
+        if(currentUser.IsActive !== undefined) {
+            if(!currentUser.isActive) return next(new AppError(401, "User is no longer exists"));
+        }
+
+        // Check if user changed password after token was issued
+        if(currentUser.passwordChangedAt) {
+            const changedTimestamp = parseInt (
+                currentUser.passwordChangedAt.getTime() / 1000,
+                10
+            )
+
+            if(decoded.iat < changedTimestamp) {
+                return next(new AppError(401, "Password recently changed. Please log in again"));
+            }
         }
      
         // Attach user to request
