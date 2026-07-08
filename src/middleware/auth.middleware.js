@@ -49,7 +49,7 @@ const protect = catchAsync(
         }
 
         if(currentUser.IsActive !== undefined) {
-            if(!currentUser.isActive) return next(new AppError(401, "User is no longer exists"));
+            if(!currentUser.IsActive) return next(new AppError(401, "User is no longer exists"));
         }
 
         // Check if user changed password after token was issued
