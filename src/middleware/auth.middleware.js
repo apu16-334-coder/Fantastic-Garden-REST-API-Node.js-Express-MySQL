@@ -36,13 +36,10 @@ const protect = catchAsync(
             return next(new AppError(401, "Invalid or expired token"));
         }
 
-  
-
         const currentUser = decoded.role === 'customer'
-            ? await Customer.findOne({ where: { CustomerEmail: decoded.email} })
-            : await Staff.findOne({ where: { StaffEmail: decoded.email } });
+            ? await Customer.findByPk(decoded.id)
+            : await Staff.findByPk(decoded.id);
 
-        // console.log(currentUser)
         // Check if user still exists
         if (!currentUser) {
             return next(new AppError(401, "User is no longer exists"));

@@ -66,7 +66,7 @@ const loginCustomer = catchAsync(
             return next(new AppError(401, "Invalid Email or password"));
         }
 
-        const token = generateToken({ email: customer.CustomerEmail, role: 'customer' });
+        const token = generateToken({ id: customer.CustomerId, role: 'customer' });
 
         //response
         res.status(201).json({
@@ -114,7 +114,7 @@ const loginStaff = catchAsync(
             return next(new AppError(401, "Invalid Email or password"));
         }
 
-        const token = generateToken({ email: staff.StaffEmail, role: staff.Role });
+        const token = generateToken({ id: staff.StaffId, role: staff.Role });
 
         //response
         res.status(201).json({

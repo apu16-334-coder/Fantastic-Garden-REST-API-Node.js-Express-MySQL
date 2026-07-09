@@ -64,7 +64,7 @@ const Staff = sequelize.define('Staff', {
     tableName: 'staff',
     timestamps: false,
     defaultScope: {
-        attributes: { exclude: ['Password'] },
+        attributes: { exclude: ['Password', 'PasswordChangeAt'] },
     },
     hooks: {
         beforeValidate: async (staff) => {

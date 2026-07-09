@@ -40,6 +40,7 @@ const createStaff = catchAsync(
         })
     }
 )
+
 /**
  * getAllStaff
  * get all the staff (only admin)
@@ -54,7 +55,7 @@ const getAllStaff = catchAsync(
             .search('StaffName', 'StaffEmail')
             .sort()
             .pagination();
-        
+
         // Execute the query
         const { count, rows } = await Staff.findAndCountAll(features.options);
 
@@ -70,4 +71,55 @@ const getAllStaff = catchAsync(
     }
 )
 
-module.exports = { createStaff, getAllStaff }
+/**
+ * deleteStaff
+ * delete a staff (only admin)
+ * GET /api/v1/staffs/:id
+ */
+const deleteStaff = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // Prevent self deactivate through this endpoint
+        if (req.user.id === req.params.id) {
+            return next(new AppError(403, "Admin cannot delete his own profile"));
+        }
+
+        // find user
+        const staff = await Staff.findByPk(req.params.id);
+        if (!staff) return next(new AppError(404, 'Staff is not found'));
+        if (!staff.IsActive) return next(new AppError(400, 'Staff is already deactivated'));
+
+        await Staff.update(
+            {IsActive : false},
+            { where: { StaffId: req.params.id } }
+        );
+
+        res.status(204).send()
+    }
+)
+
+/**
+ * reactivateStaff
+ * reactivate a staff (only admin)
+ * GET /api/v1/staffs/:id/reactivate
+ */
+const reactivateStaff = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // find user
+        const staff = await Staff.findByPk(req.params.id);
+        if (!staff) return next(new AppError(404, 'Staff is not found'));
+        if (staff.IsActive) return next(new AppError(400, 'Staff is already activated'));
+
+        staff.IsActive = true;
+
+        await staff.save();
+
+        res.status(200).json({
+            success: true,
+            data: staff
+        })
+    }
+)
+
+module.exports = { createStaff, getAllStaff, deleteStaff, reactivateStaff }
