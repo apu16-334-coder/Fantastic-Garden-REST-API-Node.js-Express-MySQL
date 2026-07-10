@@ -1,10 +1,10 @@
 const router = require('express').Router();
-const {createProduct, getAllProducts, getProduct, updateProduct, deleteProduct} = require("../controllers/product.controller.js");
+const {createProduct, getAllProducts, getProduct, updateProduct, deleteProduct, restoreProduct} = require("../controllers/product.controller.js");
 
 const {restrictTo} = require("../middleware/auth.middleware");
 
 // ----------------------
-// Staff Routes
+// Product Routes
 // ----------------------
 
 // Admin-only: Create new prodcut 
@@ -15,12 +15,16 @@ router.route('/')
     .post(restrictTo('admin'), createProduct)
     .get(getAllProducts)
 
+// GET /api/v1/prodcuts/:id     → get a  prodcut(any logged user)
+// PATCH /api/v1/prodcuts/:id     → update a  prodcut(admin only)
+// DELETE /api/v1/prodcuts/:id     → delete  a  prodcut(admin only)
 router.route("/:id")
     .get(getProduct)
     .patch(restrictTo('admin'), updateProduct)
-    .delete(restrictTo('admin'), deleteProduct)
+    .delete(restrictTo('admin'), deleteProduct);
 
-
+// PATCH /api/v1/prodcuts/:id     → restore  a  prodcut(admin only)
+router.patch("/:id/restore", restrictTo('admin'), restoreProduct);
 
 module.exports = router
 

@@ -8,6 +8,7 @@ const app = express()
 const authRouter = require("./routes/auth.route.js")
 const staffRouter = require("./routes/staff.route.js")
 const productRouter = require("./routes/product.route.js")
+const serviceRouter = require("./routes/service.route.js")
 const { noRouteFound, globalErrorHandler } = require('./middleware/error.middleware.js')
 
 const { protect } = require("./middleware/auth.middleware.js");
@@ -43,6 +44,7 @@ app.get("/", (req, res) => {
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/staffs', protect, staffRouter);
 app.use('/api/v1/products', protect, productRouter);
+app.use('/api/v1/services', protect, serviceRouter);
 
 /* ---------- ERROR HANDLERS ---------- */
 

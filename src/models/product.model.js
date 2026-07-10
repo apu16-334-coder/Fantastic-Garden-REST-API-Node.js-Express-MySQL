@@ -14,7 +14,7 @@ const Product = sequelize.define('Product', {
         validate: {
             notNull: { msg: 'ProductName is required' },
             notEmpty: { msg: 'ProductName can not be empty' },
-            len: { args: [0, 30], msg: 'ProductName must be 3-30 character' }
+            len: { args: [0, 50], msg: 'ProductName must be 3-30 character' }
         }
     },
     UnitPrice: {

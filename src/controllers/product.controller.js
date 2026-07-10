@@ -1,11 +1,9 @@
 const { Product } = require('../models/index.model');
 const catchAsync = require("../utlis/catchAsync.js");
-const generateToken = require("../utlis/generateToken.js")
 
 const filterBody = require("../utlis/filterBody.js");
 const AppError = require("../utlis/AppError.js");
 const ApiFeatures = require("../utlis/ApiFeatures.js");
-const { where } = require('sequelize');
 
 /**
  * @typedef {import('express').RequestHandler} RequestHandler
@@ -143,8 +141,8 @@ const deleteProduct = catchAsync(
         if (!product) return next(new AppError(404, 'Product is not found'));
         if (product.IsDeleted) return next(new AppError(404, 'Product is already deleted'));
 
+        // execute query
         product.IsDeleted = true;
-
         await product.save();
 
         // Send response
@@ -152,4 +150,29 @@ const deleteProduct = catchAsync(
     }
 )
 
-module.exports = { createProduct, getAllProducts, getProduct, updateProduct, deleteProduct }
+/**
+ * restoreProduct
+ * restore a product by id (only admin)
+ * PATCH /api/v1/products/:id/restore
+ */
+const restoreProduct = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // find product
+        const product = await Product.findByPk(req.params.id);
+        if (!product) return next(new AppError(404, 'Product is not found'));
+        if (!product.IsDeleted) return next(new AppError(404, 'Product is already exist'));
+
+        // execute query
+        product.IsDeleted = false;
+        await product.save();
+
+        // Send response
+        res.status(200).json({
+            success: true,
+            data: product
+        })
+    }
+)
+
+module.exports = { createProduct, getAllProducts, getProduct, updateProduct, deleteProduct, restoreProduct }
