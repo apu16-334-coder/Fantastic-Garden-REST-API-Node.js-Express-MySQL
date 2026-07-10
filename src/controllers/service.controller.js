@@ -126,4 +126,26 @@ const updateService = catchAsync(
     }
 )
 
-module.exports = { createService, getAllServices, getService, updateService }
+/**
+ * deleteService
+ * delete a Service by id (only admin)
+ * DELETE /api/v1/Services/:id
+ */
+const deleteService = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // find Service
+        const service = await Service.findByPk(req.params.id);
+        if (!service) return next(new AppError(404, 'Service is not found'));
+        if (service.IsDeleted) return next(new AppError(404, 'Service is already deleted'));
+
+        // execute query
+        service.IsDeleted = true;
+        await service.save();
+
+        // Send response
+        res.status(201).send()
+    }
+)
+
+module.exports = { createService, getAllServices, getService, updateService, deleteService }
