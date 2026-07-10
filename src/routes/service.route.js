@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const {createService, getAllServices, getService, updateService, deleteService} = require("../controllers/service.controller.js");
+const {createService, getAllServices, getService, updateService, deleteService, restoreService} = require("../controllers/service.controller.js");
 
 const {restrictTo} = require("../middleware/auth.middleware");
 
@@ -24,8 +24,8 @@ router.route("/:id")
     .patch(restrictTo('admin'), updateService)
     .delete(restrictTo('admin'), deleteService);
 
-// // PATCH /api/v1/servicess/:id     → restore  a  services(admin only)
-// router.patch("/:id/restore", restrictTo('admin'), restoreProduct);
+// PATCH /api/v1/services/:id/restore    → restore  a  services(admin only)
+router.patch("/:id/restore", restrictTo('admin'), restoreService);
 
 module.exports = router
 

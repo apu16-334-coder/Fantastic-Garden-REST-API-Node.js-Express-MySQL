@@ -23,7 +23,7 @@ router.route("/:id")
     .patch(restrictTo('admin'), updateProduct)
     .delete(restrictTo('admin'), deleteProduct);
 
-// PATCH /api/v1/prodcuts/:id     → restore  a  prodcut(admin only)
+// PATCH /api/v1/prodcuts/:id/restore     → restore  a  prodcut(admin only)
 router.patch("/:id/restore", restrictTo('admin'), restoreProduct);
 
 module.exports = router
