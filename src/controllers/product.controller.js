@@ -115,7 +115,7 @@ const updateProduct = catchAsync(
         if (Object.keys(filtered).length === 0) return next(new AppError(400, "No valid fields to update"));
 
         // update
-        const updatedRows = await Product.update(
+        await Product.update(
             filtered,
             { where: { ProductId: req.params.id } }
         )

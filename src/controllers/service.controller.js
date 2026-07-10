@@ -71,7 +71,7 @@ const getAllServices = catchAsync(
 /**
  * getService
  * Get a service by id 
- * GET /api/v1/Services/:id
+ * GET /api/v1/services/:id
  */
 const getService = catchAsync(
     /** @type {RequestHandler} */
@@ -91,4 +91,39 @@ const getService = catchAsync(
     }
 )
 
-module.exports = { createService, getAllServices, getService }
+/**
+ * updateService
+ * Update a Service by id (only admin)
+ * PATCH /api/v1/services/:id
+ */
+const updateService = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // find Service
+        const service = await Service.findByPk(req.params.id);
+        if (!service) return next(new AppError(404, 'Service is not found'));
+
+        // Invalid request body
+        if (!req.body) return res.status(400).json({ success: false, message: "invalid request body" });
+
+        // filtered request body
+        const filtered = filterBody(req.body, 'ServiceName', 'ServiceFee');
+
+        // If match no fields
+        if (Object.keys(filtered).length === 0) return next(new AppError(400, "No valid fields to update"));
+
+        // update
+        await Service.update(
+            filtered,
+            { where: { ServiceId: req.params.id } }
+        )
+
+        // Send response
+        res.status(200).json({
+            success: true,
+            message: 'Update successfully'
+        })
+    }
+)
+
+module.exports = { createService, getAllServices, getService, updateService }
