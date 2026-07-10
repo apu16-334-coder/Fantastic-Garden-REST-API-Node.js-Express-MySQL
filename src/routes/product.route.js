@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const {createProduct, getAllProducts, getProduct, updateProduct} = require("../controllers/product.controller.js");
+const {createProduct, getAllProducts, getProduct, updateProduct, deleteProduct} = require("../controllers/product.controller.js");
 
 const {restrictTo} = require("../middleware/auth.middleware");
 
@@ -18,6 +18,7 @@ router.route('/')
 router.route("/:id")
     .get(getProduct)
     .patch(restrictTo('admin'), updateProduct)
+    .delete(restrictTo('admin'), deleteProduct)
 
 
 

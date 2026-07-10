@@ -130,4 +130,26 @@ const updateProduct = catchAsync(
     }
 )
 
-module.exports = { createProduct, getAllProducts, getProduct, updateProduct }
+/**
+ * deleteProduct
+ * delete a product by id (only admin)
+ * DELETE /api/v1/products/:id
+ */
+const deleteProduct = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // find product
+        const product = await Product.findByPk(req.params.id);
+        if (!product) return next(new AppError(404, 'Product is not found'));
+        if (product.IsDeleted) return next(new AppError(404, 'Product is already deleted'));
+
+        product.IsDeleted = true;
+
+        await product.save();
+
+        // Send response
+        res.status(201).send()
+    }
+)
+
+module.exports = { createProduct, getAllProducts, getProduct, updateProduct, deleteProduct }
