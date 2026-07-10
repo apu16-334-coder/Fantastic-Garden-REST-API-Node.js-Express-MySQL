@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const {createProduct, getAllProduct} = require("../controllers/product.controller.js");
+const {createProduct, getAllProducts, getProduct} = require("../controllers/product.controller.js");
 
 const {restrictTo} = require("../middleware/auth.middleware");
 
@@ -13,7 +13,10 @@ const {restrictTo} = require("../middleware/auth.middleware");
 // GET /api/v1/products      → get all prodcuts
 router.route('/')
     .post(restrictTo('admin'), createProduct)
-    .get(getAllProduct)
+    .get(getAllProducts)
+
+router.route("/:id")
+    .get(getProduct)
 
 
 

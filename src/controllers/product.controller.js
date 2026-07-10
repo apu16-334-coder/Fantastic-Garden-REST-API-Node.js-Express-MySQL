@@ -33,13 +33,12 @@ const createProduct = catchAsync(
     }
 )
 
-
 /**
  * getAllProduct
  * Get all products 
  * GET /api/v1/products
  */
-const getAllProduct = catchAsync(
+const getAllProducts = catchAsync(
     /** @type {RequestHandler} */
     async (req, res, next) => {
         // get api features with options obj
@@ -64,4 +63,24 @@ const getAllProduct = catchAsync(
     }
 )
 
-module.exports = { createProduct, getAllProduct }
+/**
+ * getProduct
+ * Get a product nby id 
+ * GET /api/v1/products/:id
+ */
+const getProduct = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // find product
+        const product = await Product.findByPk(req.params.id);
+        if(!product) return next(new AppError(404, 'Product is not found'));
+        
+        // Send response meta-data for pagination
+        res.status(200).json({
+            success: true,
+            data: product
+        })
+    }
+)
+
+module.exports = { createProduct, getAllProducts, getProduct }
