@@ -79,12 +79,13 @@ const getAllProducts = catchAsync(
  */
 const getProduct = catchAsync(
     /** @type {RequestHandler} */
-    async (req, res, next) => {       
+    async (req, res, next) => {
         // find product
         const product = await Product.findByPk(req.params.id);
-        if(!product) return next(new AppError(404, 'Product is not found'));
+        if (!product) return next(new AppError(404, 'Product is not found'));
 
-        if(product.IsDeleted && req.user.role === 'staff') return next(new AppError(404, 'Product is not found'));
+        // if product is deleted and logges user is not admin
+        if (product.IsDeleted && req.user.role !== 'admin') return next(new AppError(404, 'Product is not found'));
 
         // Send response meta-data for pagination
         res.status(200).json({
@@ -94,8 +95,39 @@ const getProduct = catchAsync(
     }
 )
 
+/**
+ * updateProduct
+ * Update a product by id (only admin)
+ * PATCH /api/v1/products/:id
+ */
+const updateProduct = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // find product
+        const product = await Product.findByPk(req.params.id);
+        if (!product) return next(new AppError(404, 'Product is not found'));
 
+        // Invalid request body
+        if (!req.body) return res.status(400).json({ success: false, message: "invalid request body" });
 
+        // filtered request body
+        const filtered = filterBody(req.body, 'ProductName', 'UnitPrice');
 
+        // If match no fields
+        if (Object.keys(filtered).length === 0) return next(new AppError(400, "No valid fields to update"));
 
-module.exports = { createProduct, getAllProducts, getProduct }
+        // update
+        const updatedRows = await Product.update(
+            filtered,
+            { where: { ProductId: req.params.id } }
+        )
+
+        // Send response
+        res.status(200).json({
+            success: true,
+            message: 'Update successfully'
+        })
+    }
+)
+
+module.exports = { createProduct, getAllProducts, getProduct, updateProduct }
