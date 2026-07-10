@@ -33,4 +33,35 @@ const createProduct = catchAsync(
     }
 )
 
-module.exports = {createProduct}
+
+/**
+ * getAllProduct
+ * Get all products 
+ * GET /api/v1/products
+ */
+const getAllProduct = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // get api features with options obj
+        const features = new ApiFeatures(req.query)
+            .filter()
+            .search('ProductName')
+            .sort()
+            .pagination();
+
+        // Execute the query
+        const { count, rows } = await Product.findAndCountAll(features.options);
+
+        // Send response meta-data for pagination
+        res.status(200).json({
+            success: true,
+            results: rows.length,
+            total: count,
+            page: features.page,
+            limit: features.options.limit,
+            data: rows
+        })
+    }
+)
+
+module.exports = { createProduct, getAllProduct }
