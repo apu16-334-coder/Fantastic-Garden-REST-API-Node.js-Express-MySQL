@@ -32,6 +32,11 @@ class ApiFeatures {
             customQueryObj.IsActive = customQueryObj.IsActive === 'true'
         }
 
+        // Make boolean string to boolean value
+        if(customQueryObj.IsDeleted) {
+            customQueryObj.IsDeleted = customQueryObj.IsDeleted === 'true'
+        }
+
         // Remove page limit sort search query fields for further query make
         ['page', 'limit', 'sort', 'search'].forEach(el => delete customQueryObj[el])
 

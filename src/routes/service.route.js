@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const {createService} = require("../controllers/service.controller.js");
+const {createService, getAllServices} = require("../controllers/service.controller.js");
 
 const {restrictTo} = require("../middleware/auth.middleware");
 
@@ -7,24 +7,24 @@ const {restrictTo} = require("../middleware/auth.middleware");
 // Service Routes
 // ----------------------
 
-// Admin-only: Create new prodcut 
-// get all prodcuts (any logged user)
-// POST /api/v1/prodcuts      → create prodcut
-// GET /api/v1/products      → get all prodcuts
+// Admin-only: Create new service 
+// get all services (any logged user)
+// POST /api/v1/services     → create a service
+// GET /api/v1/services      → get all services
 router.route('/')
     .post(restrictTo('admin'), createService)
-//     .get(getAllProducts)
+    .get(getAllServices)
 
 
-// // GET /api/v1/prodcuts/:id     → get a  prodcut(any logged user)
-// // PATCH /api/v1/prodcuts/:id     → update a  prodcut(admin only)
-// // DELETE /api/v1/prodcuts/:id     → delete  a  prodcut(admin only)
+// // GET /api/v1/servicess/:id     → get a  services(any logged user)
+// // PATCH /api/v1/servicess/:id     → update a  services(admin only)
+// // DELETE /api/v1/servicess/:id     → delete  a  services(admin only)
 // router.route("/:id")
 //     .get(getProduct)
 //     .patch(restrictTo('admin'), updateProduct)
 //     .delete(restrictTo('admin'), deleteProduct);
 
-// // PATCH /api/v1/prodcuts/:id     → restore  a  prodcut(admin only)
+// // PATCH /api/v1/servicess/:id     → restore  a  services(admin only)
 // router.patch("/:id/restore", restrictTo('admin'), restoreProduct);
 
 module.exports = router

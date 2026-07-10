@@ -32,4 +32,40 @@ const createService = catchAsync(
     }
 )
 
-module.exports = { createService }
+/**
+ * getAllService
+ * Get all services 
+ * GET /api/v1/services
+ */
+const getAllServices = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        const extraQueryFilter = req.user.role === 'admin'
+            ? {}
+            : { isDeleted: false };
+
+        console.log(extraQueryFilter)
+
+        // get api features with options obj
+        let features = new ApiFeatures(req.query, extraQueryFilter)
+            .filter()
+            .search('ServiceName')
+            .sort()
+            .pagination();
+
+        // Execute the query
+        const { count, rows } = await Service.findAndCountAll(features.options);
+
+        // Send response meta-data for pagination
+        res.status(200).json({
+            success: true,
+            results: rows.length,
+            total: count,
+            page: features.page,
+            limit: features.options.limit,
+            data: rows
+        })
+    }
+)
+
+module.exports = { createService, getAllServices }
