@@ -1,4 +1,3 @@
-const bcrypt = require("bcrypt");
 const { Staff } = require('../models/index.model');
 const catchAsync = require("../utlis/catchAsync.js");
 const generateToken = require("../utlis/generateToken.js")
