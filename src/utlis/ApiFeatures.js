@@ -9,10 +9,11 @@ class ApiFeatures {
     * Create an instance of ApiFeatures
     * @param {Object} queryObj - Query parameters from req.query
     */
-    constructor(queryObj) {
+    constructor(queryObj, extraQueryFilter) {
         this.queryObj = queryObj;
+        this.extraQueryFilter = extraQueryFilter;
 
-        this.options = {}
+        this.options = {}     
     }
 
     /**
@@ -24,7 +25,7 @@ class ApiFeatures {
      * @returns {ApiFeatures} - Returns this for method chaining
      */
     filter() {
-        const customQueryObj = { ...this.queryObj };
+        const customQueryObj = { ...this.extraQueryFilter, ...this.queryObj };
 
         // Make boolean string to boolean value
         if(customQueryObj.IsActive) {
@@ -55,7 +56,7 @@ class ApiFeatures {
             }
         })
 
-        this.options.where = { ...customQueryObj };
+        this.options.where = { ...this.options.where, ...customQueryObj };
         return this;
     }
 

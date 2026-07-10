@@ -5,6 +5,7 @@ const generateToken = require("../utlis/generateToken.js")
 const filterBody = require("../utlis/filterBody.js");
 const AppError = require("../utlis/AppError.js");
 const ApiFeatures = require("../utlis/ApiFeatures.js");
+const { where } = require('sequelize');
 
 /**
  * @typedef {import('express').RequestHandler} RequestHandler
@@ -41,12 +42,20 @@ const createProduct = catchAsync(
 const getAllProducts = catchAsync(
     /** @type {RequestHandler} */
     async (req, res, next) => {
+        const extraQueryFilter = req.user.role === 'admin'
+            ? {}
+            : { isDeleted: false };
+
+        console.log(extraQueryFilter)
+
         // get api features with options obj
-        const features = new ApiFeatures(req.query)
+        let features = new ApiFeatures(req.query, extraQueryFilter)
             .filter()
             .search('ProductName')
             .sort()
             .pagination();
+
+        console.log(features.options)
 
         // Execute the query
         const { count, rows } = await Product.findAndCountAll(features.options);
@@ -65,16 +74,18 @@ const getAllProducts = catchAsync(
 
 /**
  * getProduct
- * Get a product nby id 
+ * Get a product by id 
  * GET /api/v1/products/:id
  */
 const getProduct = catchAsync(
     /** @type {RequestHandler} */
-    async (req, res, next) => {
+    async (req, res, next) => {       
         // find product
         const product = await Product.findByPk(req.params.id);
         if(!product) return next(new AppError(404, 'Product is not found'));
-        
+
+        if(product.IsDeleted && req.user.role === 'staff') return next(new AppError(404, 'Product is not found'));
+
         // Send response meta-data for pagination
         res.status(200).json({
             success: true,
@@ -82,5 +93,9 @@ const getProduct = catchAsync(
         })
     }
 )
+
+
+
+
 
 module.exports = { createProduct, getAllProducts, getProduct }

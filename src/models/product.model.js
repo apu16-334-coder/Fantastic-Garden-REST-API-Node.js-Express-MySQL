@@ -25,6 +25,11 @@ const Product = sequelize.define('Product', {
             notEmpty: { msg: 'UnitPrice is can not be empty' },
         }
     },
+    IsDeleted: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
 }, {
     tableName: 'product',
     timestamps: false,
