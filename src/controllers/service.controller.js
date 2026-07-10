@@ -68,4 +68,27 @@ const getAllServices = catchAsync(
     }
 )
 
-module.exports = { createService, getAllServices }
+/**
+ * getService
+ * Get a service by id 
+ * GET /api/v1/Services/:id
+ */
+const getService = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // find Service
+        const service = await Service.findByPk(req.params.id);
+        if (!service) return next(new AppError(404, 'Service is not found'));
+
+        // if Service is deleted and logges user is not admin
+        if (service.IsDeleted && req.user.role !== 'admin') return next(new AppError(404, 'Service is not found'));
+
+        // Send response meta-data for pagination
+        res.status(200).json({
+            success: true,
+            data: service
+        })
+    }
+)
+
+module.exports = { createService, getAllServices, getService }

@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const {createService, getAllServices} = require("../controllers/service.controller.js");
+const {createService, getAllServices, getService} = require("../controllers/service.controller.js");
 
 const {restrictTo} = require("../middleware/auth.middleware");
 
@@ -16,11 +16,11 @@ router.route('/')
     .get(getAllServices)
 
 
-// // GET /api/v1/servicess/:id     → get a  services(any logged user)
-// // PATCH /api/v1/servicess/:id     → update a  services(admin only)
-// // DELETE /api/v1/servicess/:id     → delete  a  services(admin only)
-// router.route("/:id")
-//     .get(getProduct)
+// GET /api/v1/services/:id     → get a  services(any logged user)
+// PATCH /api/v1/services/:id     → update a  services(admin only)
+// DELETE /api/v1/services/:id     → delete  a  services(admin only)
+router.route("/:id")
+    .get(getService)
 //     .patch(restrictTo('admin'), updateProduct)
 //     .delete(restrictTo('admin'), deleteProduct);
 
