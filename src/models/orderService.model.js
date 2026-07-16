@@ -15,9 +15,14 @@ const OrderService = sequelize.define('OrderService', {
         type: DataTypes.INTEGER,
         allowNull: false,
     },
+    ServiceStatus: {
+        type: DataTypes.ENUM('pending', 'in-progress', 'completed'),
+        defaultValue: 'pending',
+        allowNull: false,
+    },
     StaffId: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
     },
 }, {
     tableName: 'orderservice',

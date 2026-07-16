@@ -62,11 +62,11 @@ const Customer = sequelize.define('Customer', {
         type: DataTypes.STRING(15),
         allowNull: false,
         validate: {
-            notNull: { msg: 'Phone number is required' },
-            notEmpty: { msg: 'Phone number can not be empty' },
+            notNull: { msg: 'PhoneNumber is required' },
+            notEmpty: { msg: 'PhoneNumber can not be empty' },
             is: {
                 args: /^\+[0-9]{1,3}[0-9]{7,14}$/,
-                msg: 'Phone number must be in international format: +[country code][number] (e.g., +8801712345678)'
+                msg: 'PhoneNumber must be in international format: +[country code][number] (e.g., +8801712345678)'
             }
         }
     },
