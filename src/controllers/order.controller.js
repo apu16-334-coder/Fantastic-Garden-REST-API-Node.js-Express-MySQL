@@ -1,4 +1,4 @@
-const { sequelize, Order, OrderProduct, OrderService, Product, Service, Customer } = require('../models/index.model');
+const { sequelize, Staff, Order, OrderProduct, OrderService, Product, Service, Customer } = require('../models/index.model');
 const { Op, where } = require('sequelize');
 const catchAsync = require("../utlis/catchAsync.js");
 
@@ -51,7 +51,7 @@ const createOrder = catchAsync(
             attributes: ['ServiceId']
         });
 
-        if (dbProducts.length > 0 ) {
+        if (dbProducts.length > 0) {
             const alreadyIncluded = finalServices.some(s => s.ServiceId === deliveryService.ServiceId);
             if (!alreadyIncluded) {
                 finalServices.push({ ServiceId: deliveryService.ServiceId });
@@ -125,4 +125,70 @@ const createOrder = catchAsync(
     }
 )
 
-module.exports = { createOrder }
+/**
+ * getAllOrder
+ * get all the orders 
+ * GET /api/v1/orders
+ */
+const getAllOrder = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        let extraFilter = {};
+        let orderServiceInclude = {
+            model: OrderService,
+            include: [
+                { model: Service, attributes: ['ServiceId', 'ServiceName', 'ServiceFee'] },
+                { model: Staff, attributes: ['StaffId', 'StaffName'] },
+            ],
+        };
+        let includeCustomer = false;
+
+        if (req.user.role === 'customer') {
+            extraFilter = { CustomerId: req.user.id };
+        } else if (req.user.role === 'staff') {
+            orderServiceInclude = {
+                ...orderServiceInclude,
+                where: { StaffId: req.user.id },
+                required: true, // INNER JOIN — only orders where this staff is assigned
+            };
+            includeCustomer = true;
+        } else if (req.user.role === 'admin') {
+            includeCustomer = true; // admin gets to see who placed each order
+        }
+
+        const features = new ApiFeatures(req.query, extraFilter)
+            .filter()
+            .sort()
+            .pagination();
+
+        const include = [
+            {
+                model: OrderProduct,
+                include: [{ model: Product, attributes: ['ProductId', 'ProductName', 'UnitPrice'] }],
+            },
+            orderServiceInclude,
+        ];
+
+        if (includeCustomer) {
+            include.push({ model: Customer, attributes: ['CustomerId', 'CustomerName', 'CustomerEmail'] });
+        }
+
+        const { count, rows } = await Order.findAndCountAll({
+            ...features.options,
+            distinct: true,
+            include,
+        });
+
+        // Send response meta-data for pagination
+        res.status(200).json({
+            success: true,
+            results: rows.length,
+            total: count,
+            page: features.page,
+            limit: features.options.limit,
+            data: rows
+        })
+    }
+)
+
+module.exports = { createOrder, getAllOrder }

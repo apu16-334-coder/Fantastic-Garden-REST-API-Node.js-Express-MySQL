@@ -8,13 +8,6 @@ const validateOrderInput = (products =[], services =[]) => {
     // if caught error then return
     if (err.length > 0) return err;
 
-    // checking if arrays are empty
-    if (products.length === 0 && services.length === 0) {
-        err.push('An order must include at least one product or service.');
-
-        return err;
-    }
-
     // Loop products array
     products.forEach((p, i) => {
         // checking if ProductId is missing
