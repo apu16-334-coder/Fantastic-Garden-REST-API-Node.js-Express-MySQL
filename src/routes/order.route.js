@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { createOrder, getAllOrder } = require("../controllers/order.controller.js");
+const { createOrder, getAllOrder, getOrder } = require("../controllers/order.controller.js");
 
 const {restrictTo} = require("../middleware/auth.middleware");
 
@@ -18,6 +18,9 @@ router.use('/:orderId/services', orderserviceRouter) // ← this is the connecti
 router.route('/')
     .post(restrictTo('customer'), createOrder)
     .get(getAllOrder)
+
+router.route('/:id')
+    .get(getOrder)
 
 module.exports = router
 

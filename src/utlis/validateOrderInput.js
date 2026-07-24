@@ -1,4 +1,4 @@
-const validateOrderInput = (products =[], services =[]) => {
+const validateOrderInput = (products, services) => {
     let err = [];
 
     // checking they are error or not

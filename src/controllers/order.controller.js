@@ -136,6 +136,7 @@ const getAllOrder = catchAsync(
         let extraFilter = {};
         let orderServiceInclude = {
             model: OrderService,
+            attributes: ['OrderServiceId', 'ServiceStatus'],
             include: [
                 { model: Service, attributes: ['ServiceId', 'ServiceName', 'ServiceFee'] },
                 { model: Staff, attributes: ['StaffId', 'StaffName'] },
@@ -164,19 +165,21 @@ const getAllOrder = catchAsync(
         const include = [
             {
                 model: OrderProduct,
+                attributes: ['OrderProductId', 'Quantity'],
                 include: [{ model: Product, attributes: ['ProductId', 'ProductName', 'UnitPrice'] }],
             },
             orderServiceInclude,
         ];
 
         if (includeCustomer) {
-            include.push({ model: Customer, attributes: ['CustomerId', 'CustomerName', 'CustomerEmail'] });
+            include.unshift({ model: Customer, attributes: ['CustomerId', 'CustomerName'] });
         }
 
         const { count, rows } = await Order.findAndCountAll({
             ...features.options,
             distinct: true,
             include,
+            attributes: { exclude: ['CustomerId'] }
         });
 
         // Send response meta-data for pagination
@@ -191,4 +194,61 @@ const getAllOrder = catchAsync(
     }
 )
 
-module.exports = { createOrder, getAllOrder }
+/**
+ * getProduct
+ * Get a product by id 
+ * GET /api/v1/products/:id
+ */
+const getOrder = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        const orderId = req.params.id;
+        const where = { OrderId: orderId };
+
+        const include = [
+            {
+                model: Customer, attributes: ['CustomerId', 'CustomerName', 'CustomerEmail', 'CustomerAddress', 'PhoneNumber']
+            },
+            {
+                model: OrderProduct,
+                attributes: ['OrderProductId', 'Quantity'],
+                include: [{ model: Product, attributes: ['ProductId', 'ProductName', 'UnitPrice'] }],
+            },
+            {
+                model: OrderService,
+                attributes: ['OrderServiceId', 'ServiceStatus'],
+                include: [
+                    { model: Service, attributes: ['ServiceId', 'ServiceName', 'ServiceFee'] },
+                    { model: Staff, attributes: ['StaffId', 'StaffName', 'StaffEmail'] },
+                ],
+            },
+        ];
+
+        const order = await Order.findOne({
+            where,
+            include,
+            attributes: { exclude: ['CustomerId'] }
+        });
+        
+        if(!order) return next(new AppError(404, 'No order found with that ID'));
+
+        if (req.user.role === 'customer' && order.Customer.CustomerId !== req.user.id) return next(new AppError(404, 'Customer can only get his orders'));
+
+        if (req.user.role === 'staff') {
+            let isBelong = false;
+            order.OrderServices.forEach((os => {
+                if(os.Staff?.StaffId === req.user.id) isBelong = true
+            }))
+
+            if(!isBelong) return next(new AppError(404, 'Staff can only get orders he or she assigned'));
+        }
+
+        // Send response meta-data for pagination
+        res.status(200).json({
+            success: true,
+            data: order
+        })
+    }
+)
+
+module.exports = { createOrder, getAllOrder, getOrder }
