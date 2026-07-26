@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { createOrder, getAllOrder, getOrder } = require("../controllers/order.controller.js");
+const { createOrder, getAllOrder, getOrder, updateOrder } = require("../controllers/order.controller.js");
 
 const {restrictTo} = require("../middleware/auth.middleware");
 
@@ -21,6 +21,7 @@ router.route('/')
 
 router.route('/:id')
     .get(getOrder)
+    .patch(restrictTo('customer'),updateOrder)
 
 module.exports = router
 

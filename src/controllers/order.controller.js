@@ -152,6 +152,7 @@ const getAllOrder = catchAsync(
                 where: { StaffId: req.user.id },
                 required: true, // INNER JOIN — only orders where this staff is assigned
             };
+            extraFilter = { OrderStatus: { [Op.ne]: 'cancelled' } };
             includeCustomer = true;
         } else if (req.user.role === 'admin') {
             includeCustomer = true; // admin gets to see who placed each order
@@ -195,15 +196,20 @@ const getAllOrder = catchAsync(
 )
 
 /**
- * getProduct
- * Get a product by id 
- * GET /api/v1/products/:id
+ * getOrder
+ * Get a order by id 
+ * GET /api/v1/orders/:id
  */
 const getOrder = catchAsync(
     /** @type {RequestHandler} */
     async (req, res, next) => {
         const orderId = req.params.id;
-        const where = { OrderId: orderId };
+        let where = { OrderId: orderId };
+
+        // if logged user is staff
+        if (req.user.role === 'staff') {
+            where = { ...where, OrderStatus: { [Op.ne]: 'cancelled' } };
+        }
 
         const include = [
             {
@@ -229,18 +235,19 @@ const getOrder = catchAsync(
             include,
             attributes: { exclude: ['CustomerId'] }
         });
-        
-        if(!order) return next(new AppError(404, 'No order found with that ID'));
+
+        if (!order) return next(new AppError(404, 'No order found with that ID'));
+
 
         if (req.user.role === 'customer' && order.Customer.CustomerId !== req.user.id) return next(new AppError(404, 'Customer can only get his orders'));
 
         if (req.user.role === 'staff') {
             let isBelong = false;
             order.OrderServices.forEach((os => {
-                if(os.Staff?.StaffId === req.user.id) isBelong = true
+                if (os.Staff?.StaffId === req.user.id) isBelong = true
             }))
 
-            if(!isBelong) return next(new AppError(404, 'Staff can only get orders he or she assigned'));
+            if (!isBelong) return next(new AppError(404, 'Staff can only get orders he or she assigned'));
         }
 
         // Send response meta-data for pagination
@@ -251,4 +258,124 @@ const getOrder = catchAsync(
     }
 )
 
-module.exports = { createOrder, getAllOrder, getOrder }
+/**
+ * updateOrder
+ * Update a order by id (only customer)
+ * PATCH /api/v1/orders/:id
+ */
+const updateOrder = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // find product
+        const order = await Order.findByPk(req.params.id);
+
+        if (!order) return next(new AppError(404, 'No order found with that ID'));
+
+        if (order.OrderStatus !== 'pending') return next(new AppError(404, 'Only pending order can update'));
+
+        if (order.CustomerId !== req.user.id) return next(new AppError(404, 'Customer can only update his orders'));
+
+        // Validate body — identical to createOrder
+        if (!req.body) return res.status(400).json({ success: false, message: 'invalid request body' });
+
+        const { products = [], services = [] } = req.body;
+
+        if (products.length === 0 && services.length === 0) {
+            return next(new AppError(400, 'An order must include at least one product or service.'));
+        }
+
+        const validationErr = validateOrderInput(products, services);
+        if (validationErr.length > 0) return next(new AppError(400, validationErr.join(', ')));
+
+        // Re-validate products exist
+        const productIds = products.map(p => p.ProductId);
+        const dbProducts = productIds.length > 0
+            ? await Product.findAll({ where: { ProductId: { [Op.in]: productIds }, IsDeleted: false } })
+            : [];
+
+        const dbProductIds = dbProducts.map(p => p.ProductId);
+        const missingProducts = productIds.filter(id => !dbProductIds.includes(id));
+        if (missingProducts.length > 0) {
+            return next(new AppError(400, `Product(s) not found: ${missingProducts.join(', ')}`));
+        }
+
+        // Auto-attach Delivery service if the order has any products
+        let finalServices = [...services];
+        const deliveryService = await Service.findOne({
+            where: { ServiceName: 'Delivery' },
+            attributes: ['ServiceId'],
+        });
+
+        if (dbProducts.length > 0 && deliveryService) {
+            const alreadyIncluded = finalServices.some(s => s.ServiceId === deliveryService.ServiceId);
+            if (!alreadyIncluded) {
+                finalServices.push({ ServiceId: deliveryService.ServiceId });
+            }
+        }
+
+        // Re-validate services exist
+        const serviceIds = finalServices.map(s => s.ServiceId);
+        const dbServices = serviceIds.length > 0
+            ? await Service.findAll({ where: { ServiceId: { [Op.in]: serviceIds }, IsDeleted: false } })
+            : [];
+
+        const dbServiceIds = dbServices.map(s => s.ServiceId);
+        const missingServices = serviceIds.filter(id => !dbServiceIds.includes(id));
+        if (missingServices.length > 0) {
+            return next(new AppError(400, `Service(s) not found: ${missingServices.join(', ')}`));
+        }
+
+        // Recalculate TotalCost from scratch — never trust old TotalCost or client input
+        let totalCost = 0;
+        products.forEach(p => {
+            const dbProduct = dbProducts.find(dp => dp.ProductId === p.ProductId);
+            totalCost += dbProduct.UnitPrice * p.Quantity;
+        });
+        dbServices.forEach(s => {
+            totalCost += s.ServiceFee;
+        });
+
+        // Replace line items inside a transaction
+        const t = await sequelize.transaction();
+        try {
+            // Wipe old line items for this order
+            await OrderProduct.destroy({ where: { OrderId: order.OrderId }, transaction: t });
+            await OrderService.destroy({ where: { OrderId: order.OrderId }, transaction: t });
+
+            // Insert the new ones
+            if (products.length > 0) {
+                const orderProductRows = products.map(p => ({
+                    OrderId: order.OrderId,
+                    ProductId: p.ProductId,
+                    Quantity: p.Quantity,
+                }));
+                await OrderProduct.bulkCreate(orderProductRows, { transaction: t });
+            }
+
+            if (finalServices.length > 0) {
+                const orderServiceRows = finalServices.map(s => ({
+                    OrderId: order.OrderId,
+                    ServiceId: s.ServiceId,
+                    StaffId: null,
+                }));
+                await OrderService.bulkCreate(orderServiceRows, { transaction: t });
+            }
+
+            // Update the order's TotalCost
+            await order.update({ TotalCost: totalCost }, { transaction: t });
+
+            await t.commit();
+
+            // Send response
+            res.status(200).json({
+                success: true,
+                message: 'Update successfully'
+            })
+        } catch (err) {
+            await t.rollback();
+            throw err;
+        }
+    }
+)
+
+module.exports = { createOrder, getAllOrder, getOrder, updateOrder }
