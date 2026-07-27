@@ -20,7 +20,7 @@ const createOrder = catchAsync(
     /** @type {RequestHandler} */
     async (req, res, next) => {
         // checj invalid request body
-        if (!req.body) return res.status(400).json({ success: false, message: "invalid request body" });
+        if (!req.body) return next(new AppError(400, 'Invalid request body'));
 
         const { products = [], services = [] } = req.body;
 
@@ -239,7 +239,7 @@ const getOrder = catchAsync(
         if (!order) return next(new AppError(404, 'No order found with that ID'));
 
 
-        if (req.user.role === 'customer' && order.Customer.CustomerId !== req.user.id) return next(new AppError(404, 'Customer can only get his orders'));
+        if (req.user.role === 'customer' && order.Customer.CustomerId !== req.user.id) return next(new AppError(403, 'Customer can only get his orders'));
 
         if (req.user.role === 'staff') {
             let isBelong = false;
@@ -247,7 +247,7 @@ const getOrder = catchAsync(
                 if (os.Staff?.StaffId === req.user.id) isBelong = true
             }))
 
-            if (!isBelong) return next(new AppError(404, 'Staff can only get orders he or she assigned'));
+            if (!isBelong) return next(new AppError(403, 'Staff can only get orders, he or she assigned'));
         }
 
         // Send response meta-data for pagination
@@ -271,12 +271,12 @@ const updateOrder = catchAsync(
 
         if (!order) return next(new AppError(404, 'No order found with that ID'));
 
-        if (order.OrderStatus !== 'pending') return next(new AppError(404, 'Only pending order can update'));
+        if (order.OrderStatus !== 'pending') return next(new AppError(400, 'Only pending order can update'));
 
-        if (order.CustomerId !== req.user.id) return next(new AppError(404, 'Customer can only update his orders'));
+        if (order.CustomerId !== req.user.id) return next(new AppError(403, 'Customer can only update his orders'));
 
         // Validate body — identical to createOrder
-        if (!req.body) return res.status(400).json({ success: false, message: 'invalid request body' });
+        if (!req.body) return next(new AppError(400, 'Invalid request body'));
 
         const { products = [], services = [] } = req.body;
 
@@ -378,4 +378,44 @@ const updateOrder = catchAsync(
     }
 )
 
-module.exports = { createOrder, getAllOrder, getOrder, updateOrder }
+/**
+ * deleteOrder
+ * delete a order by id (admin,customer)
+ * must pass CancellationReason in request body as json
+ * DELETE /api/v1/orders/:id
+ */
+const deleteOrder = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // find order
+        const order = await Order.findByPk(req.params.id);
+        if (!order) return next(new AppError(404, 'Order is not found'));
+        if (order.OrderStatus === 'cancelled') return next(new AppError(400, 'Order is already cancelled'));
+
+        if(req.user.role === 'customer') {
+            if(order.OrderStatus !== 'pending') return next(new AppError(400, 'Customer can only cancelled the order when it is pending'));
+
+            if (order.CustomerId !== req.user.id) return next(new AppError(403, 'Customer can only cancel his orders'));           
+        }
+
+        if(req.user.role === 'admin') {
+            if(order.OrderStatus === 'completed') return next(new AppError(400, 'Admin can only cancelled the order when it not completed'));
+        }
+
+        if (!req.body) return next(new AppError(400, 'Invalid request body'));
+        const { CancellationReason } = req.body;
+        if(!CancellationReason) return next(new AppError(400, 'CancellationReason is required'));
+
+        // execute query
+        order.OrderStatus = 'cancelled';
+        order.CancellationReason = CancellationReason;
+        await order.save();
+
+        // Send response
+        res.status(201).send()
+    }
+)
+
+
+
+module.exports = { createOrder, getAllOrder, getOrder, updateOrder, deleteOrder }

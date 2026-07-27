@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { createOrder, getAllOrder, getOrder, updateOrder } = require("../controllers/order.controller.js");
+const { createOrder, getAllOrder, getOrder, updateOrder, deleteOrder } = require("../controllers/order.controller.js");
 
 const {restrictTo} = require("../middleware/auth.middleware");
 
@@ -19,9 +19,14 @@ router.route('/')
     .post(restrictTo('customer'), createOrder)
     .get(getAllOrder)
 
+
+// GET /api/v1/orders/:id   → get a Order by id
+// PATCH /api/v1/orders/:id   → update a Order by id(customer if pending)
+// DELETE /api/v1/orders/:id   → delete a Order by id(customer and admin)
 router.route('/:id')
     .get(getOrder)
     .patch(restrictTo('customer'),updateOrder)
+    .delete(restrictTo('customer', 'admin'),deleteOrder)
 
 module.exports = router
 
