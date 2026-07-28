@@ -71,15 +71,18 @@ const Staff = sequelize.define('Staff', {
             if (staff.StaffName) staff.StaffName = staff.StaffName.trim();
 
             if (staff.StaffEmail) staff.StaffEmail = staff.StaffEmail.trim();
-
-            // Hash password if present
-            if (staff.Password) {
-                staff.Password = await bcrypt.hash(staff.Password, 12);
+        },
+        // Runs ONLY when creating a new record (INSERT)
+        beforeCreate: async (customer) => {
+            if (customer.Password) {
+                customer.Password = await bcrypt.hash(customer.Password, 12);
             }
         },
-        beforeUpdate: (staff) => {
-            if(staff.changed('Password')) {
-                staff.PasswordChangeAt = Date.now() - 1000;
+        // Runs ONLY when updating an existing record (UPDATE)
+        beforeUpdate: async (customer) => {
+            if (customer.changed('Password')) {
+                customer.Password = await bcrypt.hash(customer.Password, 12);
+                customer.PasswordChangeAt = Date.now() - 1000;
             }
         }
     },

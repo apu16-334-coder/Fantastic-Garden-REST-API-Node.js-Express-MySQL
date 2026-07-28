@@ -130,6 +130,40 @@ const loginStaff = catchAsync(
     }
 )
 
+/**
+ * changePassword
+ * Allows authenticated user to change their password
+ * PATCH /api/v1/auth/change-password
+ */
+const changePassword = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // If request body is invalid
+        if(!req.body) return next(new AppError(400, 'Not valid request body'));
 
+        const { currentPassword, newPassword } = req.body;
 
-module.exports = { signUp, loginCustomer, loginStaff }
+        if(!currentPassword) return next(new AppError(400, 'currentPassword is required'));
+
+        if(!newPassword) return next(new AppError(400, 'newPassword is required'));
+
+        // Find current user + password 
+        const currentUser = req.user.role === 'customer'
+            ? await Customer.unscoped().findByPk(req.user.id)
+            : await Staff.unscoped().findByPk(req.user.id);
+        
+        if(! await bcrypt.compare(currentPassword, currentUser.Password)) {
+            return next(new AppError(401, 'Current password is incorrect'))
+        }
+
+        currentUser.Password = newPassword; // set new plain password
+        await currentUser.save() // triggers pre("save") → hashing + passwordChangedAt
+
+        res.status(200).json({
+            success: true,
+            message: "Password changed successfully"
+        });       
+    }
+)
+
+module.exports = { signUp, loginCustomer, loginStaff, changePassword }

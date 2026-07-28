@@ -78,7 +78,7 @@ const Customer = sequelize.define('Customer', {
     tableName: 'customer',
     timestamps: false,
     defaultScope: {
-        attributes: { exclude: ['Password'] },
+        attributes: { exclude: ['Password', 'PasswordChangeAt'] },
     },
     hooks: {
         beforeValidate: async (customer) => {
@@ -87,18 +87,21 @@ const Customer = sequelize.define('Customer', {
             if (customer.CustomerAddress) customer.CustomerAddress = customer.CustomerAddress.trim();
 
             if (customer.CustomerEmail) customer.CustomerEmail = customer.CustomerEmail.trim();
-
-            // Hash password if present
+        },
+        // Runs ONLY when creating a new record (INSERT)
+        beforeCreate: async (customer) => {
             if (customer.Password) {
                 customer.Password = await bcrypt.hash(customer.Password, 12);
             }
         },
-        beforeUpdate: (customer) => {
-            if(customer.changed('Password')) {
-                customer.PasswordChangeAt = Date.now() -1000;
+        // Runs ONLY when updating an existing record (UPDATE)
+        beforeUpdate: async (customer) => {
+            if (customer.changed('Password')) {
+                customer.Password = await bcrypt.hash(customer.Password, 12);
+                customer.PasswordChangeAt = Date.now() - 1000;
             }
         }
-    },   
-}) 
+    },
+})
 
 module.exports = Customer;

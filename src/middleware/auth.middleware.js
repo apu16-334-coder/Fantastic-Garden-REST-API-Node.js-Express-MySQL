@@ -37,8 +37,8 @@ const protect = catchAsync(
         }
 
         const currentUser = decoded.role === 'customer'
-            ? await Customer.findByPk(decoded.id)
-            : await Staff.findByPk(decoded.id);
+            ? await Customer.unscoped().findByPk(decoded.id)
+            : await Staff.unscoped().findByPk(decoded.id);
 
         // Check if user still exists
         if (!currentUser) {
@@ -50,14 +50,15 @@ const protect = catchAsync(
         }
 
         // Check if user changed password after token was issued
-        if(currentUser.passwordChangedAt) {
+
+        if(currentUser.PasswordChangeAt) {
             const changedTimestamp = parseInt (
-                currentUser.passwordChangedAt.getTime() / 1000,
+                currentUser.PasswordChangeAt.getTime() / 1000,
                 10
             )
 
             if(decoded.iat < changedTimestamp) {
-                return next(new AppError(401, "Password recently changed. Please log in again"));
+                return next(new AppError(401, "Please log in again"));
             }
         }
      
