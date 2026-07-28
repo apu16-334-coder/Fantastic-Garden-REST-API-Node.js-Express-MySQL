@@ -41,4 +41,24 @@ const getAllCustomer = catchAsync(
     }
 )
 
-module.exports = { getAllCustomer }
+/**
+ * getCustomer
+ * Get a customer by id 
+ * GET /api/v1/customers/:id
+ */
+const getCustomer = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // find customer
+        const customer = await Customer.findByPk(req.params.id);
+        if (!customer) return next(new AppError(404, 'customer is not found'));
+
+        // Send response meta-data for pagination
+        res.status(200).json({
+            success: true,
+            data: customer
+        })
+    }
+)
+
+module.exports = { getAllCustomer, getCustomer }
