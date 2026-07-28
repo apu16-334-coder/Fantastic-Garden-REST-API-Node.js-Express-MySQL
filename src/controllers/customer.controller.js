@@ -61,4 +61,29 @@ const getCustomer = catchAsync(
     }
 )
 
-module.exports = { getAllCustomer, getCustomer }
+/**
+ * getMe
+ * Get Customer himself or hershelf
+ * GET /api/v1/customers/me
+ */
+const getMe = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // find customer
+        const me = await Customer.findOne({
+            where: {
+                CustomerId: req.user.id
+            }
+        });
+
+        // Send response meta-data for pagination
+        res.status(200).json({
+            success: true,
+            data: me
+        })
+    }
+)
+
+
+
+module.exports = { getAllCustomer, getCustomer, getMe }
