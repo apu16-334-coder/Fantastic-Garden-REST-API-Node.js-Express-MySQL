@@ -399,7 +399,7 @@ const deleteOrder = catchAsync(
         }
 
         if(req.user.role === 'admin') {
-            if(order.OrderStatus === 'completed') return next(new AppError(400, 'Admin can only cancelled the order when it not completed'));
+            if(order.OrderStatus === 'completed') return next(new AppError(400, 'Admin can only cancelled the order when it is not completed'));
         }
 
         if (!req.body) return next(new AppError(400, 'Invalid request body'));

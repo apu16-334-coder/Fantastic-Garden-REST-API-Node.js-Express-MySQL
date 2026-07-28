@@ -38,6 +38,9 @@ const assignStaffToService = catchAsync(
         const staff = await Staff.findByPk(StaffId);
         if (!staff) return next(new AppError(404, 'Staff is not found'));
         if (!staff.IsActive) return next(new AppError(404, 'Staff is not Active'));
+        
+        // Check if staff or not
+        if (staff.Role !== 'staff') return next(new AppError(404, 'User is not a staff'));
 
         const t = await sequelize.transaction();
         try {

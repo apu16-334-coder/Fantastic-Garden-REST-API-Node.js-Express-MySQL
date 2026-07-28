@@ -80,7 +80,7 @@ const getStaff = catchAsync(
     /** @type {RequestHandler} */
     async (req, res, next) => {
         // if admin trying get his profile
-        if(req.params.id == req.user.id) return next(new AppError(400, 'Use /api/v1/staffs/me route'))
+        if (req.params.id == req.user.id) return next(new AppError(400, 'Use /api/v1/staffs/me route'))
 
         // find staff
         const staff = await Staff.findByPk(req.params.id);
@@ -118,6 +118,44 @@ const getMe = catchAsync(
     }
 )
 
+/**
+ * updateStaff
+ * Update a staff or admin by id (only admin)
+ * PATCH /api/v1/staffs/:id
+ */
+const updateStaff = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // if admin trying update his profile
+        if (req.params.id == req.user.id) return next(new AppError(400, 'Admin can not update his own profile'));
+
+        // find staff
+        const staff = await Staff.findByPk(req.params.id);
+        if (!staff) return next(new AppError(404, 'Staff is not found'));
+        if (!staff.IsActive) return next(new AppError(404, 'Staff is not active'));
+
+        // Invalid request body
+        if (!req.body) return res.status(400).json({ success: false, message: "invalid request body" });
+
+        // filtered request body
+        const filtered = filterBody(req.body, 'StaffName', 'StaffEmail');
+
+        // If match no fields
+        if (Object.keys(filtered).length === 0) return next(new AppError(400, "No valid fields to update"));
+
+        // update
+        await Staff.update(
+            filtered,
+            { where: { StaffId: req.params.id } }
+        )
+
+        // Send response
+        res.status(200).json({
+            success: true,
+            message: 'Update successfully'
+        })
+    }
+)
 
 /**
  * deleteStaff
@@ -221,4 +259,92 @@ const reactivateStaff = catchAsync(
     }
 )
 
-module.exports = { createStaff, getAllStaff, deleteStaff, reactivateStaff, getStaff, getMe }
+/**
+ * changeUserRole
+ * Admin-only: change user role
+ * PATCH /api/v1/staffs/:id/change-role
+ */
+const changeUserRole = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // if admin trying update his profile
+        if (req.params.id == req.user.id) return next(new AppError(400, 'Admin can not change his own role'));
+
+        // find staff
+        const staff = await Staff.findByPk(req.params.id);
+        if (!staff) return next(new AppError(404, 'Staff is not found'));
+        if (!staff.IsActive) return next(new AppError(404, 'Staff is not active'));
+
+        // Invalid request body
+        if (!req.body) return res.status(400).json({ success: false, message: "invalid request body" });
+
+        const { Role } = req.body;
+        if (!Role) return next(new AppError(400, 'Role is required'));
+
+        if (staff.Role === Role) return next(new AppError(400, `Role is already ${Role}`));
+
+        const t = await sequelize.transaction();
+        try {
+            if (Role === 'admin') {
+                // Find affected OrderService rows — unfinished service, unfinished order
+                const affectedOrderServices = await OrderService.findAll({
+                    where: {
+                        StaffId: staff.StaffId,
+                        ServiceStatus: { [Op.ne]: 'completed' }
+                    },
+                    include: [{
+                        model: Order,
+                        attributes: ['OrderId', 'OrderStatus',],
+                        where: { OrderStatus: { [Op.notIn]: ['cancelled', 'completed'] } },
+                        required: true,
+                    }],
+                    transaction: t,
+                });
+
+                const affectedOrderServicesIds = affectedOrderServices.map(el => el.OrderServiceId);
+                const affectedOrderIds = [... new Set(affectedOrderServices.map(el => el.OrderId))];
+
+                // Reassign — plain column filter, no join needed here
+                await OrderService.update(
+                    { StaffId: null, ServiceStatus: 'pending' },
+                    {
+                        where: { OrderServiceId: { [Op.in]: affectedOrderServicesIds } },
+                        transaction: t,
+                    }
+                )
+
+                // Re-check each affected order fresh
+                for (const orderId of affectedOrderIds) {
+                    const siblings = await OrderService.findAll({
+                        where: { OrderId: orderId },
+                        transaction: t,
+                    });
+
+                    const hasInProgress = siblings.some(os => os.ServiceStatus === 'in-progress');
+
+                    if (!hasInProgress) {
+                        await Order.update(
+                            { OrderStatus: 'pending' },
+                            { where: { OrderId: orderId }, transaction: t }
+                        );
+                    }
+                }
+            }
+
+            staff.Role = Role;
+            await staff.save({ transaction: t });
+
+            await t.commit();
+            res.status(200).json({
+                success: true,
+                data: staff
+            })
+
+        } catch (err) {
+            await t.rollback();
+            throw err;
+        }
+    }
+)
+
+module.exports = { createStaff, getAllStaff, deleteStaff, reactivateStaff, getStaff, getMe, updateStaff, changeUserRole }

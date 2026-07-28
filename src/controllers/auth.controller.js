@@ -147,6 +147,8 @@ const changePassword = catchAsync(
 
         if(!newPassword) return next(new AppError(400, 'newPassword is required'));
 
+        if(currentPassword === newPassword) return next(new AppError(400, 'new password can not be same of current password'));
+
         // Find current user + password 
         const currentUser = req.user.role === 'customer'
             ? await Customer.unscoped().findByPk(req.user.id)

@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const {createStaff, getAllStaff, deleteStaff, reactivateStaff, getStaff, getMe} = require("../controllers/staff.controller");
+const {createStaff, getAllStaff, deleteStaff, reactivateStaff, getStaff, getMe, updateStaff, changeUserRole} = require("../controllers/staff.controller");
 
 const {restrictTo} = require("../middleware/auth.middleware");
 
@@ -19,17 +19,23 @@ router.route('/')
 router.get('/me', restrictTo('staff', 'admin'), getMe)
 
 // Admin-only: get a staff
+// Admin-only: update a staff
 // Admin-only: delete a staff
 // GET /api/v1/staffs/:id      → get a staff by id
+// PATCH /api/v1/staffs/:id      → update a staff by id
 // DELETE /api/v1/staffs/:id      → delete a staff by id
 router.route('/:id')
     .get(restrictTo('admin'), getStaff)
+    .patch(restrictTo('admin'), updateStaff)
     .delete(restrictTo('admin'), deleteStaff)
-
 
 // Admin-only: reactivate a staff
 // DELETE /api/v1/staffs/:id/reactivate     → reactivate a staff by id
-router.patch('/:id/reactivate', reactivateStaff);
+router.patch('/:id/reactivate', restrictTo('admin'), reactivateStaff);
+
+// Admin-only: change user role of  a staff or admin
+// DELETE /api/v1/staffs/:id/change-role     → change-role of a staff by id
+router.patch('/:id/change-role', restrictTo('admin'), changeUserRole);
 
 module.exports = router
 
