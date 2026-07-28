@@ -72,6 +72,33 @@ const getAllStaff = catchAsync(
 )
 
 /**
+ * getStaff
+ * Get a staff by id(only admin)
+ * GET /api/v1/staffs/:id
+ */
+const getStaff = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        console.log(req.params.id)
+        console.log(req.user.id)
+        // if admin trying get his profile
+        if(req.params.id == req.user.id) return next(new AppError(400, 'Use /api/v1/staffs/me route'))
+
+        // find staff
+        const staff = await Staff.findByPk(req.params.id);
+        if (!staff) return next(new AppError(404, 'Staff is not found'));
+        if (!staff.IsActive) return next(new AppError(404, 'Staff is not active'));
+
+        // Send response meta-data for pagination
+        res.status(200).json({
+            success: true,
+            data: staff
+        })
+    }
+)
+
+
+/**
  * deleteStaff
  * delete a staff (only admin)
  * GET /api/v1/staffs/:id
@@ -173,4 +200,4 @@ const reactivateStaff = catchAsync(
     }
 )
 
-module.exports = { createStaff, getAllStaff, deleteStaff, reactivateStaff }
+module.exports = { createStaff, getAllStaff, deleteStaff, reactivateStaff, getStaff }
