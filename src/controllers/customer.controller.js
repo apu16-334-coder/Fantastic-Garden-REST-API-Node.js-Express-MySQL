@@ -63,7 +63,7 @@ const getCustomer = catchAsync(
 
 /**
  * getMe
- * Get Customer himself or hershelf
+ * Get Customer himself or hershelf (only customer)
  * GET /api/v1/customers/me
  */
 const getMe = catchAsync(
@@ -84,6 +84,35 @@ const getMe = catchAsync(
     }
 )
 
+/**
+ * updateMe
+ * Update a customer himself or herself by id (only customer)
+ * PATCH /api/v1/Customers/me
+ */
+const updateMe = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // Invalid request body
+        if (!req.body) return res.status(400).json({ success: false, message: "invalid request body" });
 
+        // filtered request body
+        const filtered = filterBody(req.body, 'CustomerName', 'CustomerAddress', 'CustomerEmail', 'PhoneNumber');
 
-module.exports = { getAllCustomer, getCustomer, getMe }
+        // If match no fields
+        if (Object.keys(filtered).length === 0) return next(new AppError(400, "No valid fields to update"));
+
+        // update
+        await Customer.update(
+            filtered,
+            { where: { CustomerId: req.user.id } }
+        )
+
+        // Send response
+        res.status(200).json({
+            success: true,
+            message: 'Update successfully'
+        })
+    }
+)
+
+module.exports = { getAllCustomer, getCustomer, getMe, updateMe }

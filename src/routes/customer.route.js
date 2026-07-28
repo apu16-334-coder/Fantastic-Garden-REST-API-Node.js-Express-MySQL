@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { getAllCustomer, getCustomer, getMe } = require("../controllers/customer.controller.js");
+const { getAllCustomer, getCustomer, getMe, updateMe } = require("../controllers/customer.controller.js");
 
 const {restrictTo} = require("../middleware/auth.middleware");
 
@@ -16,8 +16,9 @@ router.route('/')
 // GET /api/v1/customers/me     → Get Customer himself or hershelf
 router.get('/me', restrictTo('customer'), getMe)
 
-
-
+// update a Customer by id (customer only)
+// GET /api/v1/customers/me     → Update Customer himself or hershelf
+router.patch('/me', restrictTo('customer'), updateMe)
 
 // get a Customer by id (admin only)
 // GET /api/v1/customers      → get a Customer by id
