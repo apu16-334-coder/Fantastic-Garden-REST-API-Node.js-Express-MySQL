@@ -347,4 +347,37 @@ const changeUserRole = catchAsync(
     }
 )
 
-module.exports = { createStaff, getAllStaff, deleteStaff, reactivateStaff, getStaff, getMe, updateStaff, changeUserRole }
+/**
+ * resetStaffPassword
+ * Admin-only: reset a staff password by id
+ * PATCH /api/v1/staffs/:id/reset-password
+ */
+const resetUserPassword = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // if admin trying update his profile
+        if (req.params.id == req.user.id) return next(new AppError(400, 'Admin can not reset his or her own password'));
+
+        // find staff
+        const staff = await Staff.unscoped().findByPk(req.params.id);
+        if (!staff) return next(new AppError(404, 'Staff is not found'));
+        if (!staff.IsActive) return next(new AppError(404, 'Staff is not active'));
+
+        // Invalid request body
+        if (!req.body) return res.status(400).json({ success: false, message: "invalid request body" });
+
+        const { newPassword } = req.body;
+
+        if(!newPassword) return next(new AppError(400, 'newPassword is required'));
+
+        staff.Password = newPassword; // set new plain password
+        await staff.save() // triggers pre("save") → hashing + passwordChangedAt
+
+        res.status(200).json({
+            success: true,
+            message: "Password reset successfully"
+        });      
+    }
+)
+
+module.exports = { createStaff, getAllStaff, deleteStaff, reactivateStaff, getStaff, getMe, updateStaff, changeUserRole, resetUserPassword }

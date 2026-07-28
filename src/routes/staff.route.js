@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const {createStaff, getAllStaff, deleteStaff, reactivateStaff, getStaff, getMe, updateStaff, changeUserRole} = require("../controllers/staff.controller");
+const {createStaff, getAllStaff, deleteStaff, reactivateStaff, getStaff, getMe, updateStaff, changeUserRole, resetUserPassword} = require("../controllers/staff.controller");
 
 const {restrictTo} = require("../middleware/auth.middleware");
 
@@ -30,12 +30,16 @@ router.route('/:id')
     .delete(restrictTo('admin'), deleteStaff)
 
 // Admin-only: reactivate a staff
-// DELETE /api/v1/staffs/:id/reactivate     → reactivate a staff by id
+// PATCH /api/v1/staffs/:id/reactivate     → reactivate a staff by id
 router.patch('/:id/reactivate', restrictTo('admin'), reactivateStaff);
 
 // Admin-only: change user role of  a staff or admin
-// DELETE /api/v1/staffs/:id/change-role     → change-role of a staff by id
+// PATCH /api/v1/staffs/:id/change-role     → change-role of a staff by id
 router.patch('/:id/change-role', restrictTo('admin'), changeUserRole);
+
+// Admin-only: reset staff or admin password
+// PATCH /api/v1/staffs/:id/reset-password    → reset password of a staff by id
+router.patch('/:id/reset-password', restrictTo('admin'), resetUserPassword);
 
 module.exports = router
 
