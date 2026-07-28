@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { createOrder, getAllOrder, getOrder, updateOrder, deleteOrder } = require("../controllers/order.controller.js");
+const { createOrder, getAllOrder, getOrder, updateOrder, deleteOrder, reopenOrder } = require("../controllers/order.controller.js");
 
 const {restrictTo} = require("../middleware/auth.middleware");
 
@@ -27,6 +27,8 @@ router.route('/:id')
     .get(getOrder)
     .patch(restrictTo('customer'),updateOrder)
     .delete(restrictTo('customer', 'admin'),deleteOrder)
+
+router.patch('/:id/reopen', restrictTo('admin'), reopenOrder);
 
 module.exports = router
 

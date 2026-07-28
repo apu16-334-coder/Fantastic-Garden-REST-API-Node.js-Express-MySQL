@@ -25,7 +25,7 @@ class ApiFeatures {
      * @returns {ApiFeatures} - Returns this for method chaining
      */
     filter() {
-        const customQueryObj = { ...this.extraQueryFilter, ...this.queryObj };
+        const customQueryObj = {...this.queryObj };
 
         // Make boolean string to boolean value
         if(customQueryObj.IsActive) {
@@ -61,7 +61,7 @@ class ApiFeatures {
             }
         })
 
-        this.options.where = { ...this.options.where, ...customQueryObj };
+        this.options.where = { ...this.options.where, ...customQueryObj, ...this.extraQueryFilter };
         return this;
     }
 

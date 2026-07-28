@@ -416,6 +416,53 @@ const deleteOrder = catchAsync(
     }
 )
 
+/**
+ * reopenOrder
+ * reopen a order by id (admin)
+ * DELETE /api/v1/orders/:id
+ */
+const reopenOrder = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        const orderId = req.params.id;
+        let where = { OrderId: orderId };
+        const include = [
+            {
+                model: OrderService,
+                attributes: ['OrderServiceId', 'ServiceStatus'],
+            },
+        ];
 
+        // find order
+        const order = await Order.findOne({
+            where,
+            include
+        });
+        if (!order) return next(new AppError(404, 'Order is not found'));
+        if (order.OrderStatus !== 'cancelled') return next(new AppError(400, 'Order is not cancelled'));
 
-module.exports = { createOrder, getAllOrder, getOrder, updateOrder, deleteOrder }
+        // Find the status of order
+        let isProgress = false; 
+        order.OrderServices.forEach(os => {
+            if(os.ServiceStatus === 'in-progress') {
+                isProgress = true;
+            }            
+        })
+
+        // set order status
+        order.OrderStatus = isProgress 
+            ? 'in-progress'
+            : 'pending'
+
+        // execute query
+        await order.save()
+
+        // Send response
+        res.status(200).json({
+            success: true,
+            data: order
+        });
+    }
+)
+
+module.exports = { createOrder, getAllOrder, getOrder, updateOrder, deleteOrder, reopenOrder }
