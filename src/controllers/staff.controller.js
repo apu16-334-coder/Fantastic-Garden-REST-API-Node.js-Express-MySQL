@@ -79,8 +79,6 @@ const getAllStaff = catchAsync(
 const getStaff = catchAsync(
     /** @type {RequestHandler} */
     async (req, res, next) => {
-        console.log(req.params.id)
-        console.log(req.user.id)
         // if admin trying get his profile
         if(req.params.id == req.user.id) return next(new AppError(400, 'Use /api/v1/staffs/me route'))
 
@@ -93,6 +91,29 @@ const getStaff = catchAsync(
         res.status(200).json({
             success: true,
             data: staff
+        })
+    }
+)
+
+/**
+ * getMe
+ * Get me by id(staff/admin)
+ * GET /api/v1/staffs/me
+ */
+const getMe = catchAsync(
+    /** @type {RequestHandler} */
+    async (req, res, next) => {
+        // find staff
+        const me = await Staff.findOne({
+            where: {
+                StaffId: req.user.id
+            }
+        });
+
+        // Send response meta-data for pagination
+        res.status(200).json({
+            success: true,
+            data: me
         })
     }
 )
@@ -200,4 +221,4 @@ const reactivateStaff = catchAsync(
     }
 )
 
-module.exports = { createStaff, getAllStaff, deleteStaff, reactivateStaff, getStaff }
+module.exports = { createStaff, getAllStaff, deleteStaff, reactivateStaff, getStaff, getMe }

@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const {createStaff, getAllStaff, deleteStaff, reactivateStaff, getStaff} = require("../controllers/staff.controller");
+const {createStaff, getAllStaff, deleteStaff, reactivateStaff, getStaff, getMe} = require("../controllers/staff.controller");
 
 const {restrictTo} = require("../middleware/auth.middleware");
 
@@ -14,6 +14,9 @@ router.route('/')
     .post(restrictTo('admin'), createStaff)
     .get(restrictTo('admin'), getAllStaff)
 
+// get a staff by id (staff, admin)
+// GET /api/v1/staffs/me     → Get staff himself or hershelf
+router.get('/me', restrictTo('staff', 'admin'), getMe)
 
 // Admin-only: get a staff
 // Admin-only: delete a staff
