@@ -1,5 +1,5 @@
 const { sequelize, Staff, Order, OrderProduct, OrderService, Product, Service, Customer } = require('../models/index.model');
-const { Op, where } = require('sequelize');
+const { Op } = require('sequelize');
 const catchAsync = require("../utlis/catchAsync.js");
 
 const filterBody = require("../utlis/filterBody.js");

@@ -1,6 +1,7 @@
-const { Staff } = require('../models/index.model');
+const { sequelize, Staff, Order, OrderService } = require('../models/index.model');
 const catchAsync = require("../utlis/catchAsync.js");
 const generateToken = require("../utlis/generateToken.js")
+const { Op, where } = require('sequelize');
 
 const filterBody = require("../utlis/filterBody.js");
 const AppError = require("../utlis/AppError.js");
@@ -88,12 +89,63 @@ const deleteStaff = catchAsync(
         if (!staff) return next(new AppError(404, 'Staff is not found'));
         if (!staff.IsActive) return next(new AppError(400, 'Staff is already deactivated'));
 
-        await Staff.update(
-            {IsActive : false},
-            { where: { StaffId: req.params.id } }
-        );
+        const t = await sequelize.transaction();
+        try {
+            // Deactivate
+            staff.IsActive = false;
+            await staff.save({ transaction: t });
 
-        res.status(204).send()
+            // Find affected OrderService rows — unfinished service, unfinished order
+            const affectedOrderServices = await OrderService.findAll({
+                where: {
+                    StaffId: staff.StaffId,
+                    ServiceStatus: { [Op.ne]: 'completed' }
+                },
+                include: [{
+                    model: Order,
+                    attributes: ['OrderId', 'OrderStatus',],
+                    where: { OrderStatus: { [Op.notIn]: ['cancelled', 'completed'] } },
+                    required: true,
+                }],
+                transaction: t,
+            });
+
+            const affectedOrderServicesIds = affectedOrderServices.map(el => el.OrderServiceId);
+            const affectedOrderIds = [... new Set(affectedOrderServices.map(el => el.OrderId))];
+
+            // Reassign — plain column filter, no join needed here
+            await OrderService.update(
+                { StaffId: null, ServiceStatus: 'pending' },
+                {
+                    where: { OrderServiceId: { [Op.in]: affectedOrderServicesIds } },
+                    transaction: t,
+                }
+            )
+
+            // Re-check each affected order fresh
+            for (const orderId of affectedOrderIds) {
+                const siblings = await OrderService.findAll({
+                    where: { OrderId: orderId },
+                    transaction: t,
+                });
+
+                const hasInProgress = siblings.some(os => os.ServiceStatus === 'in-progress');
+
+                if (!hasInProgress) {
+                    await Order.update(
+                        { OrderStatus: 'pending' },
+                        { where: { OrderId: orderId }, transaction: t }
+                    );
+                }
+            }
+
+            await t.commit();
+            res.status(204).send()
+
+        } catch (err) {
+            await t.rollback();
+            throw err;
+        }
     }
 )
 
