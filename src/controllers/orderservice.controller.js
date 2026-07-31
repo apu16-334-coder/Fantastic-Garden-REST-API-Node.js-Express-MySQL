@@ -1,4 +1,4 @@
-const { sequelize, Order, OrderProduct, OrderService, Product, Service, Customer, Staff } = require('../models/index.model');
+const { sequelize, Order, OrderService, Staff } = require('../models/index.model');
 const { Op, where } = require('sequelize');
 const catchAsync = require("../utlis/catchAsync.js");
 

@@ -67,7 +67,7 @@ const Staff = sequelize.define('Staff', {
         attributes: { exclude: ['Password', 'PasswordChangeAt'] },
     },
     hooks: {
-        beforeValidate: async (staff) => {
+        beforeValidate: (staff) => {
             if (staff.StaffName) staff.StaffName = staff.StaffName.trim();
 
             if (staff.StaffEmail) staff.StaffEmail = staff.StaffEmail.trim();

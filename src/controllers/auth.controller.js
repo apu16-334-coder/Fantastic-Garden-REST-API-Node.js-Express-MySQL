@@ -18,7 +18,7 @@ const AppError = require("../utlis/AppError.js");
 const signUp = catchAsync(
     /** @type {RequestHandler} */
     async (req, res, next) => {
-        if (!req.body) return res.status(400).json({ success: false, message: "invalid request body" });
+        if (!req.body) return next(new AppError(400, 'invalid request body'));
 
         const filtered = filterBody(req.body, 'CustomerName', 'CustomerAddress', 'CustomerEmail', 'Password', 'PhoneNumber');
 
@@ -43,7 +43,7 @@ const signUp = catchAsync(
 const loginCustomer = catchAsync(
     /** @type {RequestHandler} */
     async (req, res, next) => {
-        if (!req.body) return res.status(400).json({ success: false, message: "invalid request body" });
+        if (!req.body) return next(new AppError(400, 'invalid request body'));
 
         // get requested email and password
         const { CustomerEmail, Password } = req.body;
@@ -91,7 +91,7 @@ const loginCustomer = catchAsync(
 const loginStaff = catchAsync(
     /** @type {RequestHandler} */
     async (req, res, next) => {
-        if (!req.body) return res.status(400).json({ success: false, message: "invalid request body" });
+        if (!req.body) return next(new AppError(400, 'invalid request body'));
 
         // get requested email and password
         const { StaffEmail, Password } = req.body;

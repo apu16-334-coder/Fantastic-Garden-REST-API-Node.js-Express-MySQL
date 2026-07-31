@@ -24,8 +24,6 @@ const getAllCustomer = catchAsync(
             .sort()
             .pagination();
 
-        console.log(features.options)
-
         // Execute the query
         const { count, rows } = await Customer.findAndCountAll(features.options);
 
@@ -53,7 +51,7 @@ const getCustomer = catchAsync(
         const customer = await Customer.findByPk(req.params.id);
         if (!customer) return next(new AppError(404, 'customer is not found'));
 
-        // Send response meta-data for pagination
+        // Send response
         res.status(200).json({
             success: true,
             data: customer
@@ -63,7 +61,7 @@ const getCustomer = catchAsync(
 
 /**
  * getMe
- * Get Customer himself or hershelf (only customer)
+ * Get Customer profile himself or hershelf (only customer)
  * GET /api/v1/customers/me
  */
 const getMe = catchAsync(
@@ -76,7 +74,7 @@ const getMe = catchAsync(
             }
         });
 
-        // Send response meta-data for pagination
+        // Send response
         res.status(200).json({
             success: true,
             data: me
@@ -86,15 +84,15 @@ const getMe = catchAsync(
 
 /**
  * updateMe
- * Update a customer himself or herself by id (only customer)
+ * Update logged customer himself or herself (only customer)
  * PATCH /api/v1/Customers/me
  */
 const updateMe = catchAsync(
     /** @type {RequestHandler} */
     async (req, res, next) => {
         // Invalid request body
-        if (!req.body) return res.status(400).json({ success: false, message: "invalid request body" });
-
+        if (!req.body) return next(new AppError(400, "Invalid request body"));
+        
         // filtered request body
         const filtered = filterBody(req.body, 'CustomerName', 'CustomerAddress', 'CustomerEmail', 'PhoneNumber');
 

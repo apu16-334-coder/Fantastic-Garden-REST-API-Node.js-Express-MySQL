@@ -81,7 +81,7 @@ const Customer = sequelize.define('Customer', {
         attributes: { exclude: ['Password', 'PasswordChangeAt'] },
     },
     hooks: {
-        beforeValidate: async (customer) => {
+        beforeValidate: (customer) => {
             if (customer.CustomerName) customer.CustomerName = customer.CustomerName.trim();
 
             if (customer.CustomerAddress) customer.CustomerAddress = customer.CustomerAddress.trim();
