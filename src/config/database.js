@@ -8,7 +8,14 @@ const sequelize = new Sequelize(
         host: process.env.DB_HOST,
         port: process.env.DB_PORT,
         dialect: 'mysql',
-        logging: console.log
+        logging: console.log,
+
+        dialectOptions: {
+            ssl: {
+                require: true,      // Important: Aiven requires SSL/TLS
+                rejectUnauthorized: false
+            }
+        }
     }
 )
 
@@ -22,7 +29,14 @@ async function ensureDatabase() {
             host: process.env.DB_HOST,
             port: process.env.DB_PORT,
             dialect: 'mysql',
-            logging: false
+            logging: false,
+
+            dialectOptions: {
+                ssl: {
+                    require: true,      // Important: Aiven requires SSL/TLS
+                    rejectUnauthorized: false
+                }
+            }
         }
     );
 
