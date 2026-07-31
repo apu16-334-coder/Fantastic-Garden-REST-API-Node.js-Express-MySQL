@@ -412,7 +412,7 @@ const deleteOrder = catchAsync(
         await order.save();
 
         // Send response
-        res.status(201).send()
+        res.status(204).send()
     }
 )
 

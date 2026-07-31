@@ -42,7 +42,7 @@ const getAllServices = catchAsync(
     async (req, res, next) => {
         const extraQueryFilter = req.user.role === 'admin'
             ? {}
-            : { isDeleted: false };
+            : { IsDeleted: false };
 
         console.log(extraQueryFilter)
 
@@ -144,7 +144,7 @@ const deleteService = catchAsync(
         await service.save();
 
         // Send response
-        res.status(201).send()
+        res.status(204).send()
     }
 )
 

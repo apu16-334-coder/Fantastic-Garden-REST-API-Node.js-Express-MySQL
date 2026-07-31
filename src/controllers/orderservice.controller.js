@@ -27,7 +27,7 @@ const assignStaffToService = catchAsync(
             }
         })
         if (!orderService) return next(new AppError(404, 'OrderService is not found'));
-        if (!orderService.ServiceStatus === 'completed') return next(new AppError(404, `OrderService is completed`));
+        if (orderService.ServiceStatus === 'completed') return next(new AppError(404, `OrderService is completed`));
 
         // checj invalid request body
         if (!req.body) return res.status(400).json({ success: false, message: "invalid request body" });

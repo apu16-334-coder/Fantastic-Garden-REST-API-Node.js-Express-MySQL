@@ -43,7 +43,7 @@ const Staff = sequelize.define('Staff', {
         validate: {
             notNull: { msg: 'Password is required' },
             notEmpty: { msg: 'Password is can not be empty' },
-            min: { args: 8, mesg: 'Password must be at least 8 characters' }
+            len: { args: [8], msg: 'Password must be at least 8 characters' }
         }
     },
     Role: {

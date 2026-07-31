@@ -166,7 +166,7 @@ const deleteStaff = catchAsync(
     /** @type {RequestHandler} */
     async (req, res, next) => {
         // Prevent self deactivate through this endpoint
-        if (req.user.id === req.params.id) {
+        if (req.user.id == req.params.id) {
             return next(new AppError(403, "Admin cannot delete his own profile"));
         }
 
