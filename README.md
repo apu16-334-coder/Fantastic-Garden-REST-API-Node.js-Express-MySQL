@@ -60,7 +60,7 @@ Every order that includes products automatically gets a `Delivery` service attac
 | POST | `/api/v1/auth/login/customer` | Public | Customer login. Looks up by `CustomerEmail` using `.unscoped()` (since `Password` is excluded from the model's `defaultScope`), compares with bcrypt, issues a JWT (`{ id, role: 'customer' }`). |
 | POST | `/api/v1/auth/login/staff` | Public | Staff/admin login, same pattern. `role` in the JWT is read directly from the DB row (`staff.Role`), so admins automatically get `role: 'admin'` tokens. |
 | PATCH | `/api/v1/auth/change-password` | Any authenticated user (customer or staff) | Self-service password change. Requires `currentPassword` + `newPassword` in the body; rejects if they're identical. Verifies `currentPassword` against the stored hash (fetched via `.unscoped()`, since `Password` is excluded by default). On success, assigns the new plaintext password to the instance and calls `.save()` — the model's `beforeValidate` hook detects the change (`changed('Password')`) and re-hashes it automatically. |
-| GET | `/api/v1/staffs/me` | Staff or Admin | Returns the logged-in staff/admin's own profile, identified from the JWT (`req.user.id`) — not a param, so a staff member can only ever fetch their own record through this route. |
+
 
 **Design decisions:**
 - Staff accounts are **not** self-registered — only an admin can create one (via Staff CRUD), preventing public signup of privileged accounts.
@@ -71,16 +71,19 @@ Every order that includes products automatically gets a `Delivery` service attac
 
 ## Staff Management (`/api/v1/staffs`) — Admin only, except where noted
 
+All order routes require authentication; behavior branches by `req.user.role`.
+
 | Method | Route | Access | Business Logic |
 |---|---|---|---|
-| POST | `/` | Admin | Create a new staff account. Role defaults to `staff`; only admin can create another admin. |
+| POST | `/` | Admin | Create a new staff account. Role defaults to `staff`; |
 | GET | `/` | Admin | List all staff. Supports `ApiFeatures` (filter, search, sort, paginate). |
-| GET | `/:id` | Admin, or the staff member themself | Get one staff profile. |
-| PATCH | `/:id` | Admin, or the staff member themself | Update profile fields (name/email) — whitelisted via `filterBody`, cannot be used to change `Role` or `IsActive`. |
-| PATCH | `/:id/role` | Admin | Change a staff member's role (`staff` ↔ `admin`), separate from the general update route to keep privilege escalation as an explicit, isolated action. |
+| GET | `/:id` | Admin | Get one staff profile. |
+| PATCH | `/:id` | Admin. | Update profile fields (name/email) — whitelisted via `filterBody`, cannot be used to change `Role` or `IsActive`. And Admin can not update his own profile by using this route |
+| PATCH | `/:id/role` | Admin | Change a staff member's role (`staff` ↔ `admin`), separate from the general update route to keep privilege escalation as an explicit, isolated action. same cascade logic of soft delete, if change role staff to admin, not if admin to staff |
 | DELETE | `/:id` | Admin | **Soft-deletes** (deactivates) staff — see cascade logic below. Admin cannot deactivate their own account. |
 | PATCH | `/:id/reactivate` | Admin | Reverses a soft delete — sets `IsActive` back to `true`. |
-| PATCH | `/api/v1/staffs/:id/reset-password` | Admin | Forcibly resets another staff member's password (e.g., they're locked out). Admin cannot reset their own password through this route — they must use `change-password` instead, which requires knowing the current password. Takes only `newPassword` (no current-password check, since admin is acting as a trusted third party). Same hashing hook applies on save. |
+| PATCH | `/api/v1/staffs/:id/reset-password` | Admin | Forcibly resets another staff member's password (e.g., they're locked out). Admin cannot reset their own password through this route. Takes only `newPassword` (no current-password check, since admin is acting as a trusted third party). Same hashing hook applies on save. |
+| GET | `/api/v1/staffs/me` | Staff or Admin | Returns the logged-in staff/admin's own profile, identified from the JWT (`req.user.id`) — not a param, so a staff member can only ever fetch their own record through this route. |
 
 **Deactivation cascade (transaction-wrapped):**
 1. Set `staff.IsActive = false`.
@@ -94,9 +97,11 @@ This all happens in a single DB transaction — either every step succeeds, or n
 
 ## Customer Management (`/api/v1/customers`)
 
+All order routes require authentication; behavior branches by `req.user.role`.
+
 | Method | Route | Access | Business Logic |
 |---|---|---|---|
-| GET | `/` | Admin | List all customers, with `ApiFeatures`. |
+| GET | `/` | Admin | List all customers. Supports `ApiFeatures` (filter, search, sort, paginate).. |
 | GET | `/:id` | Admin | Get one customer's profile by ID. |
 | GET | `/me` | Customer | Get own profile. |
 | PATCH | `/me` | Customer | Update own profile (whitelisted fields only). |
@@ -107,16 +112,20 @@ Staff (non-admin) never gets a direct customer lookup route — they only see cu
 
 ## Products (`/api/v1/products`)
 
+All order routes require authentication; behavior branches by `req.user.role`.
+
 | Method | Route | Access | Business Logic |
 |---|---|---|---|
 | POST | `/` | Admin | Create a product. |
-| GET | `/` | Public/any authenticated role | List products. Non-admins only see `IsDeleted: false` rows; admin sees everything (including soft-deleted, for restore purposes). |
+| GET | `/` | Public/any authenticated role | List products. Non-admins only see `IsDeleted: false` rows; admin sees everything (including soft-deleted, for restore purposes). Supports `ApiFeatures` (filter, search, sort, paginate). |
 | GET | `/:id` | Any | Get one product. Non-admins get a 404 if it's soft-deleted. |
 | PATCH | `/:id` | Admin | Update product fields. |
 | DELETE | `/:id` | Admin | Soft delete (`IsDeleted = true`) — preserves historical order data referencing this product. |
 | PATCH | `/:id/restore` | Admin | Reverses a soft delete. |
 
 ## Services (`/api/v1/services`)
+
+All order routes require authentication; behavior branches by `req.user.role`.
 
 Same route shape and logic as Products. Includes the system `Delivery` service, auto-attached to any order containing products (see Schema Overview).
 
@@ -129,10 +138,10 @@ All order routes require authentication; behavior branches by `req.user.role`.
 | Method | Route | Access | Business Logic |
 |---|---|---|---|
 | POST | `/` | Customer | Create an order. See "Order Creation Logic" below. |
-| GET | `/` | Customer / Staff / Admin | List orders, scoped by role (see "Role-Based Order Visibility"). |
+| GET | `/` | Customer / Staff / Admin | List orders, scoped by role (see "Role-Based Order Visibility"). Supports `ApiFeatures` (filter, search, sort, paginate). |
 | GET | `/:id` | Customer / Staff / Admin | Get one order, same scoping rules as the list endpoint. |
 | PATCH | `/:id` | Customer (owner only) | Full replacement update — only while `OrderStatus === 'pending'`. Re-validates products/services, recalculates `TotalCost` server-side, replaces all line items inside a transaction. |
-| PATCH | `/:id/cancel` | Customer (owner, only if `pending`, no reason required) or Admin (if `pending`/`in-progress`, reason required) | Sets `OrderStatus = 'cancelled'`. The only manual order-status transition in the system. |
+| PATCH | `/:id/cancel` | Customer (owner, only if `pending`, reason required) or Admin (if `pending`/`in-progress`, reason required) | Sets `OrderStatus = 'cancelled'`. The only manual order-status transition in the system. |
 | PATCH | `/:id/reopen` | Admin | Reverses a cancellation — only valid from `cancelled`. Reverts to `in-progress` if the order has assigned staff, or `pending` if not. |
 
 ### Order Creation Logic (`POST /`)
