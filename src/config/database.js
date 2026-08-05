@@ -8,7 +8,7 @@ const sequelize = new Sequelize(
         host: process.env.DB_HOST,
         port: process.env.DB_PORT,
         dialect: 'mysql',
-        logging: console.log,
+        logging: process.env.NODE_ENV === 'production' ? false : console.log,
 
         dialectOptions: {
             ssl: {

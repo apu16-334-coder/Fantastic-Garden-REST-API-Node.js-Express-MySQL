@@ -11,7 +11,7 @@ const ApiFeatures = require("../utlis/ApiFeatures.js");
 
 /**
  * getAllCustomer
- * Get all customer 
+ * Get all customer (admin only)
  * GET /api/v1/customers
  */
 const getAllCustomer = catchAsync(
@@ -41,7 +41,7 @@ const getAllCustomer = catchAsync(
 
 /**
  * getCustomer
- * Get a customer by id 
+ * Get a customer by id (admin only)
  * GET /api/v1/customers/:id
  */
 const getCustomer = catchAsync(

@@ -18,10 +18,15 @@ const globalErrorHandler = (err, req, res, next) => {
         err.message = err.errors.map(e => e.message).join(", ")
     }
 
-    res.status(err.status || 500).json({
+    const isOperational = err.isOperational; // set this on your AppError class if not already
+    const statusCode = err.status || 500;
+
+    res.status(statusCode).json({
         success: false,
-        message: err.message || 'Internal Server Error '
-    })
+        message: (isOperational || statusCode < 500)
+            ? err.message
+            : 'Something went wrong. Please try again later.'
+    });
 }
 
 module.exports = { noRouteFound, globalErrorHandler }

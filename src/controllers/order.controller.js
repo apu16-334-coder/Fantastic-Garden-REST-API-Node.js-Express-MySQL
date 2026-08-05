@@ -32,57 +32,58 @@ const createOrder = catchAsync(
         const validationErr = validateOrderInput(products, services);
         if (validationErr.length > 0) return next(new AppError(400, validationErr.join(', ')));
 
-        // ---- Products ----
-        const productIds = products.map(p => p.ProductId);
-        const dbProducts = productIds.length > 0
-            ? await Product.findAll({ where: { ProductId: { [Op.in]: productIds }, IsDeleted: false } })
-            : [];
-
-        const dbProductIds = dbProducts.map(p => p.ProductId);
-        const missingProducts = productIds.filter(id => !dbProductIds.includes(id));
-        if (missingProducts.length > 0) {
-            return next(new AppError(400, `Product(s) not found: ${missingProducts.join(', ')}`));
-        }
-
-        // ---- Auto-attach Delivery service if the order has any products ----
-        let finalServices = [...services];
-        const deliveryService = await Service.findOne({
-            where: { ServiceName: 'Delivery' },
-            attributes: ['ServiceId']
-        });
-
-        if (dbProducts.length > 0) {
-            const alreadyIncluded = finalServices.some(s => s.ServiceId === deliveryService.ServiceId);
-            if (!alreadyIncluded) {
-                finalServices.push({ ServiceId: deliveryService.ServiceId });
-            }
-        }
-
-        // ---- Services (including the auto-added delivery one) ----
-        const serviceIds = finalServices.map(s => s.ServiceId);
-        const dbServices = serviceIds.length > 0
-            ? await Service.findAll({ where: { ServiceId: { [Op.in]: serviceIds }, IsDeleted: false } })
-            : [];
-
-        const dbServiceIds = dbServices.map(s => s.ServiceId);
-        const missingServices = serviceIds.filter(id => !dbServiceIds.includes(id));
-        if (missingServices.length > 0) {
-            return next(new AppError(400, `Service(s) not found: ${missingServices.join(', ')}`));
-        }
-
-        // ---- Calculate TotalCost server-side ----
-        let totalCost = 0;
-        products.forEach(p => {
-            const dbProduct = dbProducts.find(dp => dp.ProductId === p.ProductId);
-            totalCost += dbProduct.UnitPrice * p.Quantity;
-        });
-        dbServices.forEach(s => {
-            totalCost += s.ServiceFee;
-        });
-
-        // creating tables
         const t = await sequelize.transaction();
         try {
+            // ---- Products ----
+            const productIds = products.map(p => p.ProductId);
+            const dbProducts = productIds.length > 0
+                ? await Product.findAll({ where: { ProductId: { [Op.in]: productIds }, IsDeleted: false }, transaction: t })
+                : [];
+
+            const dbProductIds = dbProducts.map(p => p.ProductId);
+            const missingProducts = productIds.filter(id => !dbProductIds.includes(id));
+            if (missingProducts.length > 0) {
+                return next(new AppError(400, `Product(s) not found: ${missingProducts.join(', ')}`));
+            }
+
+            // ---- Auto-attach Delivery service if the order has any products ----
+            let finalServices = [...services];
+            const deliveryService = await Service.findOne({
+                where: { ServiceName: 'Delivery', IsDeleted: false },
+                attributes: ['ServiceId'],
+                transaction: t
+            });
+
+            if (dbProducts.length > 0 && deliveryService) {
+                const alreadyIncluded = finalServices.some(s => s.ServiceId === deliveryService.ServiceId);
+                if (!alreadyIncluded) {
+                    finalServices.push({ ServiceId: deliveryService.ServiceId });
+                }
+            }
+
+            // ---- Services (including the auto-added delivery one) ----
+            const serviceIds = finalServices.map(s => s.ServiceId);
+            const dbServices = serviceIds.length > 0
+                ? await Service.findAll({ where: { ServiceId: { [Op.in]: serviceIds }, IsDeleted: false }, transaction: t })
+                : [];
+
+            const dbServiceIds = dbServices.map(s => s.ServiceId);
+            const missingServices = serviceIds.filter(id => !dbServiceIds.includes(id));
+            if (missingServices.length > 0) {
+                return next(new AppError(400, `Service(s) not found: ${missingServices.join(', ')}`));
+            }
+
+            // ---- Calculate TotalCost server-side ----
+            let totalCost = 0;
+            products.forEach(p => {
+                const dbProduct = dbProducts.find(dp => dp.ProductId === p.ProductId);
+                totalCost += dbProduct.UnitPrice * p.Quantity;
+            });
+            dbServices.forEach(s => {
+                totalCost += s.ServiceFee;
+            });
+
+
             // Create the Order itself
             const order = await Order.create(
                 {
@@ -392,19 +393,19 @@ const deleteOrder = catchAsync(
         if (!order) return next(new AppError(404, 'Order is not found'));
         if (order.OrderStatus === 'cancelled') return next(new AppError(400, 'Order is already cancelled'));
 
-        if(req.user.role === 'customer') {
-            if(order.OrderStatus !== 'pending') return next(new AppError(400, 'Customer can only cancelled the order when it is pending'));
+        if (req.user.role === 'customer') {
+            if (order.OrderStatus !== 'pending') return next(new AppError(400, 'Customer can only cancelled the order when it is pending'));
 
-            if (order.CustomerId !== req.user.id) return next(new AppError(403, 'Customer can only cancel his orders'));           
+            if (order.CustomerId !== req.user.id) return next(new AppError(403, 'Customer can only cancel his orders'));
         }
 
-        if(req.user.role === 'admin') {
-            if(order.OrderStatus === 'completed') return next(new AppError(400, 'Admin can only cancelled the order when it is not completed'));
+        if (req.user.role === 'admin') {
+            if (order.OrderStatus === 'completed') return next(new AppError(400, 'Admin can only cancelled the order when it is not completed'));
         }
 
         if (!req.body) return next(new AppError(400, 'Invalid request body'));
         const { CancellationReason } = req.body;
-        if(!CancellationReason) return next(new AppError(400, 'CancellationReason is required'));
+        if (!CancellationReason) return next(new AppError(400, 'CancellationReason is required'));
 
         // execute query
         order.OrderStatus = 'cancelled';
@@ -442,15 +443,15 @@ const reopenOrder = catchAsync(
         if (order.OrderStatus !== 'cancelled') return next(new AppError(400, 'Order is not cancelled'));
 
         // Find the status of order
-        let isProgress = false; 
+        let isProgress = false;
         order.OrderServices.forEach(os => {
-            if(os.ServiceStatus === 'in-progress') {
+            if (os.ServiceStatus === 'in-progress') {
                 isProgress = true;
-            }            
+            }
         })
 
         // set order status
-        order.OrderStatus = isProgress 
+        order.OrderStatus = isProgress
             ? 'in-progress'
             : 'pending'
 
