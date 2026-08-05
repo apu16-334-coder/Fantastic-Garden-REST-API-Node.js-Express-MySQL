@@ -288,57 +288,58 @@ const updateOrder = catchAsync(
         const validationErr = validateOrderInput(products, services);
         if (validationErr.length > 0) return next(new AppError(400, validationErr.join(', ')));
 
-        // Re-validate products exist
-        const productIds = products.map(p => p.ProductId);
-        const dbProducts = productIds.length > 0
-            ? await Product.findAll({ where: { ProductId: { [Op.in]: productIds }, IsDeleted: false } })
-            : [];
-
-        const dbProductIds = dbProducts.map(p => p.ProductId);
-        const missingProducts = productIds.filter(id => !dbProductIds.includes(id));
-        if (missingProducts.length > 0) {
-            return next(new AppError(400, `Product(s) not found: ${missingProducts.join(', ')}`));
-        }
-
-        // Auto-attach Delivery service if the order has any products
-        let finalServices = [...services];
-        const deliveryService = await Service.findOne({
-            where: { ServiceName: 'Delivery' },
-            attributes: ['ServiceId'],
-        });
-
-        if (dbProducts.length > 0 && deliveryService) {
-            const alreadyIncluded = finalServices.some(s => s.ServiceId === deliveryService.ServiceId);
-            if (!alreadyIncluded) {
-                finalServices.push({ ServiceId: deliveryService.ServiceId });
-            }
-        }
-
-        // Re-validate services exist
-        const serviceIds = finalServices.map(s => s.ServiceId);
-        const dbServices = serviceIds.length > 0
-            ? await Service.findAll({ where: { ServiceId: { [Op.in]: serviceIds }, IsDeleted: false } })
-            : [];
-
-        const dbServiceIds = dbServices.map(s => s.ServiceId);
-        const missingServices = serviceIds.filter(id => !dbServiceIds.includes(id));
-        if (missingServices.length > 0) {
-            return next(new AppError(400, `Service(s) not found: ${missingServices.join(', ')}`));
-        }
-
-        // Recalculate TotalCost from scratch — never trust old TotalCost or client input
-        let totalCost = 0;
-        products.forEach(p => {
-            const dbProduct = dbProducts.find(dp => dp.ProductId === p.ProductId);
-            totalCost += dbProduct.UnitPrice * p.Quantity;
-        });
-        dbServices.forEach(s => {
-            totalCost += s.ServiceFee;
-        });
-
         // Replace line items inside a transaction
         const t = await sequelize.transaction();
         try {
+            // Re-validate products exist
+            const productIds = products.map(p => p.ProductId);
+            const dbProducts = productIds.length > 0
+                ? await Product.findAll({ where: { ProductId: { [Op.in]: productIds }, IsDeleted: false }, transaction: t })
+                : [];
+
+            const dbProductIds = dbProducts.map(p => p.ProductId);
+            const missingProducts = productIds.filter(id => !dbProductIds.includes(id));
+            if (missingProducts.length > 0) {
+                return next(new AppError(400, `Product(s) not found: ${missingProducts.join(', ')}`));
+            }
+
+            // Auto-attach Delivery service if the order has any products
+            let finalServices = [...services];
+            const deliveryService = await Service.findOne({
+                where: { ServiceName: 'Delivery' },
+                attributes: ['ServiceId'],
+                transaction: t,
+            });
+
+            if (dbProducts.length > 0 && deliveryService) {
+                const alreadyIncluded = finalServices.some(s => s.ServiceId === deliveryService.ServiceId);
+                if (!alreadyIncluded) {
+                    finalServices.push({ ServiceId: deliveryService.ServiceId });
+                }
+            }
+
+            // Re-validate services exist
+            const serviceIds = finalServices.map(s => s.ServiceId);
+            const dbServices = serviceIds.length > 0
+                ? await Service.findAll({ where: { ServiceId: { [Op.in]: serviceIds }, IsDeleted: false }, transaction: t })
+                : [];
+
+            const dbServiceIds = dbServices.map(s => s.ServiceId);
+            const missingServices = serviceIds.filter(id => !dbServiceIds.includes(id));
+            if (missingServices.length > 0) {
+                return next(new AppError(400, `Service(s) not found: ${missingServices.join(', ')}`));
+            }
+
+            // Recalculate TotalCost from scratch — never trust old TotalCost or client input
+            let totalCost = 0;
+            products.forEach(p => {
+                const dbProduct = dbProducts.find(dp => dp.ProductId === p.ProductId);
+                totalCost += dbProduct.UnitPrice * p.Quantity;
+            });
+            dbServices.forEach(s => {
+                totalCost += s.ServiceFee;
+            });
+
             // Wipe old line items for this order
             await OrderProduct.destroy({ where: { OrderId: order.OrderId }, transaction: t });
             await OrderService.destroy({ where: { OrderId: order.OrderId }, transaction: t });
