@@ -12,11 +12,12 @@ const validateOrderInput = require("../utlis/validateOrderInput.js");
  * assign staff to service (only admin)
  * PATCH /api/v1/orders/:orderId/services/:orderServiceId/assign
  */
-const assignStaffToService = catchAsync(
-    /** @type {RequestHandler} */
-    async (req, res, next) => {
+const assignStaffToService = async (req, res, next) => {
+    try {
+        const t = await sequelize.transaction();
+
         // find order
-        const order = await Order.findByPk(req.params.orderId);
+        const order = await Order.findByPk(req.params.orderId, { transaction: t });
         if (!order) return next(new AppError(404, 'Order is not found'));
         if (order.OrderStatus === 'completed' || order.OrderStatus === 'cancelled') return next(new AppError(400, `Order is ${order.OrderStatus}`));
 
@@ -24,8 +25,9 @@ const assignStaffToService = catchAsync(
             where: {
                 OrderServiceId: req.params.orderServiceId,
                 OrderId: req.params.orderId
-            }
-        })
+            },
+            transaction: t
+        });
         if (!orderService) return next(new AppError(404, 'OrderService is not found'));
         if (orderService.ServiceStatus === 'completed') return next(new AppError(404, `OrderService is completed`));
 
@@ -35,41 +37,39 @@ const assignStaffToService = catchAsync(
         const { StaffId } = req.body;
         if (!StaffId) return next(new AppError(400, 'StaffId is required'));
 
-        const staff = await Staff.findByPk(StaffId);
+        const staff = await Staff.findByPk(StaffId, { transaction: t });
         if (!staff) return next(new AppError(404, 'Staff is not found'));
         if (!staff.IsActive) return next(new AppError(404, 'Staff is not Active'));
-        
+
         // Check if staff or not
         if (staff.Role !== 'staff') return next(new AppError(404, 'User is not a staff'));
 
-        const t = await sequelize.transaction();
-        try {
-            if (orderService.ServiceStatus !== 'in-progress') {
-                orderService.ServiceStatus = 'in-progress';
-            }
-            orderService.StaffId = StaffId;
-
-            await orderService.save({ transaction: t });
-
-            if (order.OrderStatus !== 'in-progress') {
-                order.OrderStatus = 'in-progress';
-            }
-
-            await order.save({ transaction: t });
-
-            await t.commit();
-
-            res.status(200).json({
-                success: true,
-                data: orderService
-            })
-
-        } catch (err) {
-            await t.rollback();
-            throw err;
+        if (orderService.ServiceStatus !== 'in-progress') {
+            orderService.ServiceStatus = 'in-progress';
         }
+        orderService.StaffId = StaffId;
+
+        await orderService.save({ transaction: t });
+
+        if (order.OrderStatus !== 'in-progress') {
+            order.OrderStatus = 'in-progress';
+        }
+
+        await order.save({ transaction: t });
+
+        await t.commit();
+
+        res.status(200).json({
+            success: true,
+            data: orderService
+        })
+
+    } catch (err) {
+        await t.rollback();
+        next(err);
     }
-)
+}
+
 
 
 /**
@@ -77,15 +77,17 @@ const assignStaffToService = catchAsync(
  * change service status in-progress/completed  (only staff)
  * PATCH /api/v1/orders/:orderId/services/:orderServiceId/status
  */
-const updateOrderServiceStatus = catchAsync(
-    /** @type {RequestHandler} */
-    async (req, res, next) => {
+const updateOrderServiceStatus = async (req, res, next) => {
+    try {
+        const t = await sequelize.transaction();
+
         // find order service
         const orderService = await OrderService.findOne({
             where: {
                 OrderServiceId: req.params.orderServiceId,
                 OrderId: req.params.orderId
-            }
+            },
+            transaction: t,
         })
         if (!orderService) return next(new AppError(404, 'OrderService is not found'));
 
@@ -104,49 +106,46 @@ const updateOrderServiceStatus = catchAsync(
         if (ServiceStatus === orderService.ServiceStatus) return next(new AppError(400, `OrderService status is already ${ServiceStatus}`));
 
         // find order
-        const order = await Order.findByPk(req.params.orderId);
+        const order = await Order.findByPk(req.params.orderId, { transaction: t });
         if (!order) return next(new AppError(404, 'Order is not found'));
 
-        const t = await sequelize.transaction();
-        try {
-            if (ServiceStatus === 'completed') {
-                orderService.ServiceStatus = ServiceStatus;
-                await orderService.save({ transaction: t });
+        if (ServiceStatus === 'completed') {
+            orderService.ServiceStatus = ServiceStatus;
+            await orderService.save({ transaction: t });
 
-                // fetch FRESH sibling data — not the stale order.OrderServices array
-                const allServices = await OrderService.findAll({
-                    where: { OrderId: order.OrderId },
-                    transaction: t,
-                });
+            // fetch FRESH sibling data — not the stale order.OrderServices array
+            const allServices = await OrderService.findAll({
+                where: { OrderId: order.OrderId },
+                transaction: t,
+            });
 
-                const isOrderCompleted = allServices.every(os => os.ServiceStatus === 'completed');
+            const isOrderCompleted = allServices.every(os => os.ServiceStatus === 'completed');
 
-                if (isOrderCompleted) {
-                    order.OrderStatus = 'completed';
-                    await order.save({ transaction: t });
-                }
-            } else if (ServiceStatus === 'in-progress') {
-                orderService.ServiceStatus = ServiceStatus;
-
-                await orderService.save({ transaction: t })
-
-                if (order.OrderStatus === 'completed') order.OrderStatus = 'in-progress';
-
+            if (isOrderCompleted) {
+                order.OrderStatus = 'completed';
                 await order.save({ transaction: t });
             }
+        } else if (ServiceStatus === 'in-progress') {
+            orderService.ServiceStatus = ServiceStatus;
 
-            await t.commit();
+            await orderService.save({ transaction: t })
 
-            res.status(200).json({
-                success: true,
-                data: orderService
-            })
+            if (order.OrderStatus === 'completed') order.OrderStatus = 'in-progress';
 
-        } catch (err) {
-            await t.rollback();
-            throw err;
+            await order.save({ transaction: t });
         }
+
+        await t.commit();
+
+        res.status(200).json({
+            success: true,
+            data: orderService
+        })
+
+    } catch (err) {
+        await t.rollback();
+        next(err);
     }
-)
+}
 
 module.exports = { assignStaffToService, updateOrderServiceStatus }

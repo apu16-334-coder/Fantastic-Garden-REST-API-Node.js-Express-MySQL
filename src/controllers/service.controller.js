@@ -44,8 +44,6 @@ const getAllServices = catchAsync(
             ? {}
             : { IsDeleted: false };
 
-        console.log(extraQueryFilter)
-
         // get api features with options obj
         let features = new ApiFeatures(req.query, extraQueryFilter)
             .filter()

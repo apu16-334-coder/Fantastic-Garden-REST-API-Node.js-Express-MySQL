@@ -44,16 +44,12 @@ const getAllProducts = catchAsync(
             ? {}
             : { IsDeleted: false };
 
-        console.log(extraQueryFilter)
-
         // get api features with options obj
         let features = new ApiFeatures(req.query, extraQueryFilter)
             .filter()
             .search('ProductName')
             .sort()
             .pagination();
-
-        console.log(features.options)
 
         // Execute the query
         const { count, rows } = await Product.findAndCountAll(features.options);
