@@ -1,4 +1,5 @@
 const { Sequelize } = require("sequelize");
+const fs = require("fs");
 
 const sequelize = new Sequelize(
     process.env.DB_NAME,
@@ -12,38 +13,11 @@ const sequelize = new Sequelize(
 
         dialectOptions: {
             ssl: {
-                require: true,      // Important: Aiven requires SSL/TLS
-                rejectUnauthorized: false
+                ca: fs.readFileSync('./certs/isrgrootx1.pem')
             }
-        }
+        },
     }
 )
-
-async function ensureDatabase() {
-    // Temporary connection without database
-    const tempSequelize = new Sequelize(
-        null,
-        process.env.DB_USER,
-        process.env.DB_PASSWORD || '',
-        {
-            host: process.env.DB_HOST,
-            port: process.env.DB_PORT,
-            dialect: 'mysql',
-            logging: false,
-
-            dialectOptions: {
-                ssl: {
-                    require: true,      // Important: Aiven requires SSL/TLS
-                    rejectUnauthorized: false
-                }
-            }
-        }
-    );
-
-    await tempSequelize.query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME}`);
-    console.log(`✅ Database "${process.env.DB_NAME}" created or already exists`);
-    await tempSequelize.close();
-}
 
 // Async function to establish a connection to MYsql
 async function connectDB() {
@@ -52,9 +26,6 @@ async function connectDB() {
         if (!process.env.DB_NAME || !process.env.DB_USER || !process.env.DB_HOST || !process.env.DB_PORT) {
             throw new Error("Missing database environment variables");
         }
-
-        // Ensure database exists
-        await ensureDatabase();
 
         // connect mysql connection through sequelize
         await sequelize.authenticate();
