@@ -209,6 +209,60 @@ On startup, the app automatically creates the database (if it doesn't exist) and
 npm run dev
 ```
 
+## Sample Requests & Responses
+
+### Signup
+
+**POST** `https://fantastic-garden-rest-api-node-js.onrender.com/api/v1/auth/signup`
+
+Request:
+\`\`\`json
+{
+   "CustomerName": "Alamin Hossain",
+   "CustomerAddress": "London",
+   "CustomerEmail": "alaminhossain@gmail.com",
+   "Password": "1234567890alamin",
+   "PhoneNumber": "+8801912781382"
+}
+\`\`\`
+
+Response:
+\`\`\`json
+{
+    "success": true,
+    "message": "Account created successfully. Please log in."
+}
+\`\`\`
+
+### Login
+
+**POST** `https://fantastic-garden-rest-api-node-js.onrender.com/api/v1/auth/login`
+
+Request:
+\`\`\`json
+{
+    "CustomerEmail": "alaminhossain@gmail.com",
+    "Password": "1234567890alamin"
+}
+\`\`\`
+
+Response:
+\`\`\`json
+{
+    
+    "success": true,
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NjAwMDEsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTc4NjEwNzA5NiwiZXhwIjoxNzg2MTkzNDk2fQ.f0nfpQyihWRin02Z53WdXhv2VgdidKsCtpIwfLCji98",
+    "data": {
+        "CustomerId": 60001,
+        "CustomerName": "Alamin Hossain",
+        "CustomerAddress": "London",
+        "CustomerEmail": "alaminhossain@gmail.com",
+        "PhoneNumber": "+8801912781382"
+    }
+
+}
+\`\`\`
+
 ## Author
 
 Muhammad Apu Hossain
