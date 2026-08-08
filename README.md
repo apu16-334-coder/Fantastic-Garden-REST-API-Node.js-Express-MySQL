@@ -219,7 +219,7 @@ Request:
 \`\`\`json
 {
    "CustomerName": "Alamin Hossain",
-   "CustomerAddress": "London",
+   "CustomerAddress": "Dhaka",
    "CustomerEmail": "alaminhossain@gmail.com",
    "Password": "1234567890alamin",
    "PhoneNumber": "+8801912781382"
@@ -255,11 +255,149 @@ Response:
     "data": {
         "CustomerId": 60001,
         "CustomerName": "Alamin Hossain",
-        "CustomerAddress": "London",
+        "CustomerAddress": "Dhaka",
         "CustomerEmail": "alaminhossain@gmail.com",
         "PhoneNumber": "+8801912781382"
     }
 
+}
+\`\`\`
+
+### Unauthorized Access
+
+**GET** `https://fantastic-garden-rest-api-node-js.onrender.com/api/v1/staffs`(no token)
+
+Response:
+\`\`\`json
+{
+    "success": false,
+    "message": "You are not logged in. Please log in"
+}
+\`\`\`
+
+### Create Order
+
+**POST** `https://fantastic-garden-rest-api-node-js.onrender.com//api/v1/orders`
+
+**Access:** Customer only
+
+**Authorization:**
+\`\`\`
+Bearer Token:  <customer_jwt_token>
+\`\`\`
+
+Request:
+\`\`\`json
+{
+   "products": [
+        {"ProductId": 1, "Quantity": 1},
+        {"ProductId": 2, "Quantity": 1}
+   ],
+   "services": [
+        {"ServiceId": 2},
+        {"ServiceId": 3}
+   ]
+}
+\`\`\`
+
+Response:
+\`\`\`json
+{
+    "status": "success",
+    "data": {
+        "OrderDate": "2026-08-08T15:56:33.204Z",
+        "OrderStatus": "pending",
+        "OrderId": 1,
+        "CustomerId": 30001,
+        "TotalCost": 22350
+    }
+}
+\`\`\`
+
+### Get All Orders - API Features Supported(pagination, search, sort, filter)
+
+**GET** `https://fantastic-garden-rest-api-node-js.onrender.com//api/v1/orders`
+
+**Access:** Customer, Staff, Admin
+
+**Authorization:**
+\`\`\`
+Bearer Token:  <jwt_token>
+\`\`\`
+
+Response:
+\`\`\`json
+{
+    "success": true,
+    "results": 1,
+    "total": 1,
+    "page": 1,
+    "limit": 10,
+    "data": [
+        {
+            "OrderId": 1,
+            "OrderDate": "2026-08-08T15:56:33.000Z",
+            "TotalCost": 22350,
+            "OrderStatus": "pending",
+            "CancellationReason": null,
+            "Customer": {
+                "CustomerId": 30001,
+                "CustomerName": "John Herring"
+            },
+            "OrderProducts": [
+                {
+                    "OrderProductId": 1,
+                    "Quantity": 1,
+                    "Product": {
+                        "ProductId": 1,
+                        "ProductName": "Green House",
+                        "UnitPrice": 12000
+                    }
+                },
+                {
+                    "OrderProductId": 2,
+                    "Quantity": 1,
+                    "Product": {
+                        "ProductId": 2,
+                        "ProductName": "Shed",
+                        "UnitPrice": 6500
+                    }
+                }
+            ],
+            "OrderServices": [
+                {
+                    "OrderServiceId": 1,
+                    "ServiceStatus": "pending",
+                    "Service": {
+                        "ServiceId": 2,
+                        "ServiceName": "Green House Construction",
+                        "ServiceFee": 2500
+                    },
+                    "Staff": null
+                },
+                {
+                    "OrderServiceId": 2,
+                    "ServiceStatus": "pending",
+                    "Service": {
+                        "ServiceId": 3,
+                        "ServiceName": "Shed Construction",
+                        "ServiceFee": 1200
+                    },
+                    "Staff": null
+                },
+                {
+                    "OrderServiceId": 3,
+                    "ServiceStatus": "pending",
+                    "Service": {
+                        "ServiceId": 1,
+                        "ServiceName": "Delivery",
+                        "ServiceFee": 150
+                    },
+                    "Staff": null
+                }
+            ]
+        }
+    ]
 }
 \`\`\`
 
